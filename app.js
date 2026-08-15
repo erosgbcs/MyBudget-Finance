@@ -1,7 +1,7 @@
 // ---------- Data Structures ----------
 let accounts = JSON.parse(localStorage.getItem('mb_accounts')) || [
     { id: 'acc1', name: 'GCash', balance: 0 },
-    { id: 'acc2', name: 'Bank', balance: 0 }
+    { id: 'acc2', name: 'Maribank', balance: 0 }
 ];
 let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
 let budgets = JSON.parse(localStorage.getItem('mb_budgets')) || {}; // { monthKey: { category: limit } }
