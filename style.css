@@ -24,6 +24,20 @@ body {
 h1 {
     text-align: center;
     margin-bottom: 20px;
+    color: #1976d2;
+}
+
+.section {
+    background: #f9f9f9;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.section h2 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    color: #333;
 }
 
 .summary {
@@ -41,53 +55,90 @@ h1 {
     text-align: center;
 }
 
+.card.balance {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
 .card.income {
-    background: #e6f7e6;
+    background: #e8f5e9;
     color: #2e7d32;
 }
 
 .card.expense {
-    background: #fdecea;
+    background: #ffebee;
     color: #c62828;
 }
 
-.add-transaction {
-    margin-bottom: 20px;
+.row {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
 }
 
-.add-transaction input {
-    width: 100%;
+input, select {
     padding: 10px;
-    margin: 5px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
     font-size: 16px;
+    width: 100%;
 }
 
-#add-btn {
-    width: 100%;
-    padding: 10px;
+.row input, .row select {
+    flex: 1;
+    min-width: 120px;
+}
+
+button {
     background: #1976d2;
     color: white;
     border: none;
     border-radius: 5px;
+    padding: 10px 15px;
     font-size: 16px;
     cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #1565c0;
+}
+
+#add-account-btn, #add-transaction-btn, #set-budget-btn {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.account-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.account-name {
+    font-weight: bold;
+}
+
+.account-balance {
+    color: #1976d2;
+    font-weight: bold;
 }
 
 .filters {
     display: flex;
     gap: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .filter-btn {
     flex: 1;
-    padding: 8px;
     background: #e0e0e0;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+    color: #333;
 }
 
 .filter-btn.active {
@@ -102,11 +153,12 @@ h1 {
 .transaction-list li {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 12px;
-    background: #fafafa;
-    border-bottom: 1px solid #eee;
-    border-radius: 5px;
+    background: white;
+    border-radius: 8px;
     margin-bottom: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .transaction-list li.income {
@@ -117,12 +169,22 @@ h1 {
     border-left: 4px solid #f44336;
 }
 
+.transaction-info {
+    flex: 1;
+}
+
 .transaction-desc {
     font-weight: bold;
 }
 
+.transaction-meta {
+    font-size: 0.8rem;
+    color: #666;
+}
+
 .transaction-amount {
     font-weight: bold;
+    margin-right: 10px;
 }
 
 .transaction-amount.income {
@@ -139,4 +201,34 @@ h1 {
     color: #999;
     cursor: pointer;
     font-size: 18px;
+}
+
+.budget-item {
+    margin-bottom: 15px;
+}
+
+.budget-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #1976d2;
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.progress-fill.over {
+    background: #f44336;
 }

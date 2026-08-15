@@ -11,45 +11,95 @@
 <body>
     <div class="container">
         <h1>💰 MyBudget-Finance</h1>
-        
-        <!-- Balance summary -->
+
+        <!-- Accounts Section -->
+        <div class="section">
+            <h2>💳 Accounts</h2>
+            <div id="accounts-list"></div>
+            <div class="add-account">
+                <input type="text" id="new-account-name" placeholder="New account name">
+                <button id="add-account-btn">+ Add Account</button>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
         <div class="summary">
-            <div class="card">
+            <div class="card balance">
                 <p>Total Balance</p>
                 <h2 id="balance">$0.00</h2>
             </div>
             <div class="card income">
-                <p>Income</p>
+                <p>Income (This Month)</p>
                 <h3 id="total-income">$0.00</h3>
             </div>
             <div class="card expense">
-                <p>Expenses</p>
+                <p>Expenses (This Month)</p>
                 <h3 id="total-expense">$0.00</h3>
             </div>
         </div>
 
-        <!-- Add transaction form -->
-        <div class="add-transaction">
-            <h3>Add Transaction</h3>
-            <input type="text" id="description" placeholder="Description (e.g., Salary, Groceries)">
-            <input type="number" id="amount" placeholder="Amount (positive for income, negative for expense)" step="0.01">
-            <button id="add-btn">Add</button>
+        <!-- Add Transaction Form -->
+        <div class="section">
+            <h2>Add Transaction</h2>
+            <input type="text" id="description" placeholder="Description">
+            <input type="number" id="amount" placeholder="Amount" step="0.01">
+            <div class="row">
+                <select id="type">
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                </select>
+                <select id="category">
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Health">Health</option>
+                    <option value="Salary">Salary</option>
+                    <option value="Other Income">Other Income</option>
+                    <option value="Other">Other</option>
+                </select>
+                <select id="account">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <button id="add-transaction-btn">Add Transaction</button>
         </div>
 
-        <!-- Filters -->
-        <div class="filters">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="income">Income</button>
-            <button class="filter-btn" data-filter="expense">Expenses</button>
+        <!-- Budget Allocation Section -->
+        <div class="section">
+            <h2>📊 Monthly Budget Allocation</h2>
+            <p>Set budgets for expense categories (current month)</p>
+            <div class="row">
+                <select id="budget-category">
+                    <option value="Food">Food</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Shopping">Shopping</option>
+                    <option value="Bills">Bills</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Health">Health</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input type="number" id="budget-amount" placeholder="Budget limit" step="0.01">
+                <button id="set-budget-btn">Set</button>
+            </div>
+            <div id="budget-progress"></div>
         </div>
 
-        <!-- Transaction list -->
-        <ul id="transaction-list" class="transaction-list"></ul>
+        <!-- Transactions List -->
+        <div class="section">
+            <h2>Recent Transactions</h2>
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="income">Income</button>
+                <button class="filter-btn" data-filter="expense">Expenses</button>
+            </div>
+            <ul id="transaction-list" class="transaction-list"></ul>
+        </div>
     </div>
 
     <script src="app.js"></script>
     <script>
-        // Register service worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('service-worker.js')
