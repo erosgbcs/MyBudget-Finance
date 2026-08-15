@@ -1,27 +1,142 @@
 * {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-  background-color: #f4f6f8;
-  display: flex;
-  justify-content: center;
-  padding: 20px;
+    background: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
 }
 
 .container {
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
+    width: 100%;
+    max-width: 500px;
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 .card {
-  background: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-top: 15px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    flex: 1;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.card.income {
+    background: #e6f7e6;
+    color: #2e7d32;
+}
+
+.card.expense {
+    background: #fdecea;
+    color: #c62828;
+}
+
+.add-transaction {
+    margin-bottom: 20px;
+}
+
+.add-transaction input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+#add-btn {
+    width: 100%;
+    padding: 10px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filter-btn {
+    flex: 1;
+    padding: 8px;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.filter-btn.active {
+    background: #1976d2;
+    color: white;
+}
+
+.transaction-list {
+    list-style: none;
+}
+
+.transaction-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px;
+    background: #fafafa;
+    border-bottom: 1px solid #eee;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+.transaction-list li.income {
+    border-left: 4px solid #4caf50;
+}
+
+.transaction-list li.expense {
+    border-left: 4px solid #f44336;
+}
+
+.transaction-desc {
+    font-weight: bold;
+}
+
+.transaction-amount {
+    font-weight: bold;
+}
+
+.transaction-amount.income {
+    color: #4caf50;
+}
+
+.transaction-amount.expense {
+    color: #f44336;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 18px;
 }

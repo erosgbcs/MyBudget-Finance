@@ -1,19 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MyBudget Finance</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyBudget-Finance</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1976d2">
 </head>
 <body>
-  <div class="container">
-    <h1>MyBudget Finance</h1>
-    <div class="card">
-      <h2>Total Balance</h2>
-      <p id="balance">₱0.00</p>
+    <div class="container">
+        <h1>💰 MyBudget-Finance</h1>
+        
+        <!-- Balance summary -->
+        <div class="summary">
+            <div class="card">
+                <p>Total Balance</p>
+                <h2 id="balance">$0.00</h2>
+            </div>
+            <div class="card income">
+                <p>Income</p>
+                <h3 id="total-income">$0.00</h3>
+            </div>
+            <div class="card expense">
+                <p>Expenses</p>
+                <h3 id="total-expense">$0.00</h3>
+            </div>
+        </div>
+
+        <!-- Add transaction form -->
+        <div class="add-transaction">
+            <h3>Add Transaction</h3>
+            <input type="text" id="description" placeholder="Description (e.g., Salary, Groceries)">
+            <input type="number" id="amount" placeholder="Amount (positive for income, negative for expense)" step="0.01">
+            <button id="add-btn">Add</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="income">Income</button>
+            <button class="filter-btn" data-filter="expense">Expenses</button>
+        </div>
+
+        <!-- Transaction list -->
+        <ul id="transaction-list" class="transaction-list"></ul>
     </div>
-  </div>
-  <script src="script.js"></script>
+
+    <script src="app.js"></script>
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker error:', err));
+            });
+        }
+    </script>
 </body>
 </html>
