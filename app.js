@@ -1,10 +1,12 @@
 // ---------- Data Structures ----------
 let accounts = JSON.parse(localStorage.getItem('mb_accounts')) || [
-    { id: 'acc1', name: 'MariBank', balance: 0 }
+    { id: 'acc1', name: 'GCash', balance: 0 },
+    { id: 'acc2', name: 'Bank', balance: 0 }
 ];
 let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
 let budgets = JSON.parse(localStorage.getItem('mb_budgets')) || {}; // { monthKey: { category: limit } }
 let currentFilter = 'all';
+let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
 
 // ---------- Save Functions ----------
 function saveAccounts() {
@@ -16,14 +18,28 @@ function saveTransactions() {
 function saveBudgets() {
     localStorage.setItem('mb_budgets', JSON.stringify(budgets));
 }
+function saveTheme() {
+    localStorage.setItem('mb_theme', isDarkMode ? 'dark' : 'light');
+}
 
 // ---------- Utilities ----------
 function formatCurrency(val) {
-    return '$' + val.toFixed(2);
+    return '₱' + val.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 function getMonthKey() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ---------- Theme Toggle ----------
+function applyTheme() {
+    if (isDarkMode) {
+        document.body.classList.add('dark-theme');
+        document.getElementById('theme-toggle').textContent = '☀️';
+    } else {
+        document.body.classList.remove('dark-theme');
+        document.getElementById('theme-toggle').textContent = '🌙';
+    }
 }
 
 // ---------- Core Operations ----------
@@ -142,8 +158,9 @@ function renderAccounts() {
 }
 
 function renderSummary() {
-    const { income, expense, balance } = getMonthlyIncomeExpense();
-    document.getElementById('balance').textContent = formatCurrency(accounts.reduce((sum, acc) => sum + acc.balance, 0));
+    const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const { income, expense } = getMonthlyIncomeExpense();
+    document.getElementById('balance').textContent = formatCurrency(totalBalance);
     document.getElementById('total-income').textContent = formatCurrency(income);
     document.getElementById('total-expense').textContent = formatCurrency(expense);
 }
@@ -209,6 +226,12 @@ function renderAll() {
 }
 
 // ---------- Event Listeners ----------
+document.getElementById('theme-toggle').addEventListener('click', () => {
+    isDarkMode = !isDarkMode;
+    saveTheme();
+    applyTheme();
+});
+
 document.getElementById('add-account-btn').addEventListener('click', () => {
     const nameInput = document.getElementById('new-account-name');
     const name = nameInput.value.trim();
@@ -229,7 +252,6 @@ document.getElementById('add-transaction-btn').addEventListener('click', () => {
         return;
     }
     addTransaction(desc, amount, type, category, accountId);
-    // Clear form
     document.getElementById('description').value = '';
     document.getElementById('amount').value = '';
 });
@@ -254,5 +276,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// ---------- Initial Render ----------
+// ---------- Initialize ----------
+applyTheme();
 renderAll();

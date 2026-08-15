@@ -10,36 +10,39 @@
 </head>
 <body>
     <div class="container">
-        <h1>💰 MyBudget-Finance</h1>
+        <header>
+            <h1>💰 MyBudget-Finance</h1>
+            <button id="theme-toggle" class="theme-toggle">🌙</button>
+        </header>
 
         <!-- Accounts Section -->
-        <div class="section">
+        <div class="section glass">
             <h2>💳 Accounts</h2>
             <div id="accounts-list"></div>
             <div class="add-account">
                 <input type="text" id="new-account-name" placeholder="New account name">
-                <button id="add-account-btn">+ Add Account</button>
+                <button id="add-account-btn" class="btn">+ Add Account</button>
             </div>
         </div>
 
         <!-- Summary Cards -->
         <div class="summary">
-            <div class="card balance">
+            <div class="card glass balance">
                 <p>Total Balance</p>
-                <h2 id="balance">$0.00</h2>
+                <h2 id="balance">₱0.00</h2>
             </div>
-            <div class="card income">
+            <div class="card glass income">
                 <p>Income (This Month)</p>
-                <h3 id="total-income">$0.00</h3>
+                <h3 id="total-income">₱0.00</h3>
             </div>
-            <div class="card expense">
+            <div class="card glass expense">
                 <p>Expenses (This Month)</p>
-                <h3 id="total-expense">$0.00</h3>
+                <h3 id="total-expense">₱0.00</h3>
             </div>
         </div>
 
         <!-- Add Transaction Form -->
-        <div class="section">
+        <div class="section glass">
             <h2>Add Transaction</h2>
             <input type="text" id="description" placeholder="Description">
             <input type="number" id="amount" placeholder="Amount" step="0.01">
@@ -63,11 +66,11 @@
                     <!-- Populated dynamically -->
                 </select>
             </div>
-            <button id="add-transaction-btn">Add Transaction</button>
+            <button id="add-transaction-btn" class="btn">Add Transaction</button>
         </div>
 
         <!-- Budget Allocation Section -->
-        <div class="section">
+        <div class="section glass">
             <h2>📊 Monthly Budget Allocation</h2>
             <p>Set budgets for expense categories (current month)</p>
             <div class="row">
@@ -81,13 +84,13 @@
                     <option value="Other">Other</option>
                 </select>
                 <input type="number" id="budget-amount" placeholder="Budget limit" step="0.01">
-                <button id="set-budget-btn">Set</button>
+                <button id="set-budget-btn" class="btn">Set</button>
             </div>
             <div id="budget-progress"></div>
         </div>
 
         <!-- Transactions List -->
-        <div class="section">
+        <div class="section glass">
             <h2>Recent Transactions</h2>
             <div class="filters">
                 <button class="filter-btn active" data-filter="all">All</button>

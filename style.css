@@ -1,43 +1,110 @@
+:root {
+    --bg-gradient: linear-gradient(135deg, #e0e7ff, #f0f4ff, #fce7f3);
+    --card-bg: rgba(255, 255, 255, 0.25);
+    --card-border: 1px solid rgba(255, 255, 255, 0.3);
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --accent: #1976d2;
+    --accent-hover: #1565c0;
+    --income-color: #16a34a;
+    --expense-color: #dc2626;
+    --glass-blur: blur(12px);
+    --border-radius: 16px;
+    --input-bg: rgba(255, 255, 255, 0.5);
+    --input-border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.dark-theme {
+    --bg-gradient: linear-gradient(135deg, #0f172a, #1e293b, #2d1b4e);
+    --card-bg: rgba(30, 41, 59, 0.5);
+    --card-border: 1px solid rgba(255, 255, 255, 0.1);
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --income-color: #4ade80;
+    --expense-color: #f87171;
+    --input-bg: rgba(30, 41, 59, 0.6);
+    --input-border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 body {
-    background: #f4f4f4;
+    background: var(--bg-gradient);
     display: flex;
     justify-content: center;
     padding: 20px;
+    min-height: 100vh;
 }
 
 .container {
     width: 100%;
     max-width: 500px;
-    background: white;
-    border-radius: 15px;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--card-border);
+    border-radius: var(--border-radius);
     padding: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow);
+    color: var(--text-primary);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
 h1 {
-    text-align: center;
-    margin-bottom: 20px;
-    color: #1976d2;
+    font-size: 1.8rem;
+    color: var(--text-primary);
+}
+
+.theme-toggle {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
 }
 
 .section {
-    background: #f9f9f9;
-    border-radius: 10px;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--card-border);
+    border-radius: var(--border-radius);
     padding: 15px;
     margin-bottom: 20px;
+    box-shadow: var(--shadow);
 }
 
 .section h2 {
     font-size: 1.2rem;
     margin-bottom: 10px;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .summary {
@@ -49,25 +116,31 @@ h1 {
 
 .card {
     flex: 1;
-    background: #f9f9f9;
     padding: 15px;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     text-align: center;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--card-border);
+    box-shadow: var(--shadow);
 }
 
 .card.balance {
-    background: #e3f2fd;
-    color: #1976d2;
+    background: rgba(25, 118, 210, 0.2);
 }
 
 .card.income {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: rgba(22, 163, 74, 0.2);
 }
 
 .card.expense {
-    background: #ffebee;
-    color: #c62828;
+    background: rgba(220, 38, 38, 0.2);
+}
+
+.card p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .row {
@@ -79,10 +152,14 @@ h1 {
 
 input, select {
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    border: var(--input-border);
+    border-radius: 8px;
     font-size: 16px;
     width: 100%;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .row input, .row select {
@@ -90,43 +167,55 @@ input, select {
     min-width: 120px;
 }
 
-button {
-    background: #1976d2;
+.btn {
+    background: var(--accent);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     padding: 10px 15px;
     font-size: 16px;
     cursor: pointer;
-    transition: 0.2s;
-}
-
-button:hover {
-    background: #1565c0;
-}
-
-#add-account-btn, #add-transaction-btn, #set-budget-btn {
+    transition: background 0.2s, transform 0.1s;
     width: 100%;
     margin-top: 10px;
+}
+
+.btn:hover {
+    background: var(--accent-hover);
+}
+
+.btn:active {
+    transform: scale(0.98);
 }
 
 .account-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 10px;
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     margin-bottom: 5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .account-name {
     font-weight: bold;
+    color: var(--text-primary);
 }
 
 .account-balance {
-    color: #1976d2;
+    color: var(--accent);
     font-weight: bold;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 0 5px;
 }
 
 .filters {
@@ -137,13 +226,21 @@ button:hover {
 
 .filter-btn {
     flex: 1;
-    background: #e0e0e0;
-    color: #333;
+    background: rgba(255,255,255,0.2);
+    color: var(--text-primary);
+    border: var(--card-border);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    transition: background 0.2s;
 }
 
 .filter-btn.active {
-    background: #1976d2;
+    background: var(--accent);
     color: white;
+    border: none;
 }
 
 .transaction-list {
@@ -155,18 +252,18 @@ button:hover {
     justify-content: space-between;
     align-items: center;
     padding: 12px;
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     margin-bottom: 5px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .transaction-list li.income {
-    border-left: 4px solid #4caf50;
+    border-left: 4px solid var(--income-color);
 }
 
 .transaction-list li.expense {
-    border-left: 4px solid #f44336;
+    border-left: 4px solid var(--expense-color);
 }
 
 .transaction-info {
@@ -175,11 +272,12 @@ button:hover {
 
 .transaction-desc {
     font-weight: bold;
+    color: var(--text-primary);
 }
 
 .transaction-meta {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .transaction-amount {
@@ -188,19 +286,11 @@ button:hover {
 }
 
 .transaction-amount.income {
-    color: #4caf50;
+    color: var(--income-color);
 }
 
 .transaction-amount.expense {
-    color: #f44336;
-}
-
-.delete-btn {
-    background: none;
-    border: none;
-    color: #999;
-    cursor: pointer;
-    font-size: 18px;
+    color: var(--expense-color);
 }
 
 .budget-item {
@@ -212,23 +302,24 @@ button:hover {
     justify-content: space-between;
     margin-bottom: 5px;
     font-size: 0.9rem;
+    color: var(--text-secondary);
 }
 
 .progress-bar {
     width: 100%;
     height: 8px;
-    background: #e0e0e0;
+    background: rgba(255,255,255,0.2);
     border-radius: 4px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    background: #1976d2;
+    background: var(--accent);
     border-radius: 4px;
     transition: width 0.3s;
 }
 
 .progress-fill.over {
-    background: #f44336;
+    background: var(--expense-color);
 }
