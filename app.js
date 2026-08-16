@@ -59,6 +59,13 @@ function getMonthKeyFromDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// ---------- New helper: total savings for a specific account ----------
+function getSavingsTotalForAccount(accountId) {
+    return savings
+        .filter(s => s.accountId === accountId)
+        .reduce((sum, s) => sum + (s.current || 0), 0);
+}
+
 // ---------- Theme ----------
 function applyTheme() {
     if (isDarkMode) {
@@ -252,11 +259,13 @@ function getCategorySpending(monthKey) {
 
 // ---------- Net Worth ----------
 function getNetWorth() {
-    const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
+    // Effective account balance includes linked savings
+    const accountTotal = accounts.reduce((sum, acc) => {
+        return sum + acc.balance + getSavingsTotalForAccount(acc.id);
+    }, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
-    return accountTotal + savingsTotal + lentTotal - borrowedTotal;
+    return accountTotal + lentTotal - borrowedTotal;
 }
 
 function recordNetWorthSnapshot() {
@@ -279,11 +288,16 @@ function renderAccounts() {
         container.innerHTML = `<div class="empty-state">No accounts yet. Add your first account.</div>`;
     } else {
         accounts.forEach(acc => {
+            const effectiveBalance = acc.balance + getSavingsTotalForAccount(acc.id);
+            const savingsText = getSavingsTotalForAccount(acc.id) > 0 ? ` (Savings: ${formatCurrency(getSavingsTotalForAccount(acc.id))})` : '';
             const div = document.createElement('div');
             div.className = 'account-item';
             div.innerHTML = `
-                <span class="account-name">${acc.name}</span>
-                <span class="account-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
+                <div>
+                    <span class="account-name">${acc.name}</span>
+                    ${savingsText ? `<div class="transaction-meta">${savingsText}</div>` : ''}
+                </div>
+                <span class="account-balance ${getAmountClass(effectiveBalance)}">${formatCurrency(effectiveBalance)}</span>
                 <button class="delete-btn" data-account-id="${acc.id}" aria-label="Delete account">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"/>
@@ -328,11 +342,12 @@ function renderAccountBalances() {
         return;
     }
     accounts.forEach(acc => {
+        const effectiveBalance = acc.balance + getSavingsTotalForAccount(acc.id);
         const div = document.createElement('div');
         div.className = 'account-summary-item';
         div.innerHTML = `
             <span class="account-summary-name">${acc.name}</span>
-            <span class="account-summary-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
+            <span class="account-summary-balance ${getAmountClass(effectiveBalance)}">${formatCurrency(effectiveBalance)}</span>
         `;
         container.appendChild(div);
     });
@@ -454,7 +469,7 @@ function renderBills() {
 }
 
 function renderSummary() {
-    const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance + getSavingsTotalForAccount(acc.id), 0);
     const { income, expense } = getMonthlyIncomeExpense();
     document.getElementById('balance').innerHTML = formatCurrencyWithColor(totalBalance);
     document.getElementById('total-income').innerHTML = formatCurrencyWithColor(income);
@@ -462,12 +477,11 @@ function renderSummary() {
 
     const netWorth = getNetWorth();
     document.getElementById('net-worth').innerHTML = formatCurrencyWithColor(netWorth);
-    const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
+    const accountTotal = totalBalance; // already includes savings
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
     document.getElementById('net-worth-breakdown').textContent = 
-        `Accounts: ${formatCurrency(accountTotal)} + Savings: ${formatCurrency(savingsTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
+        `Accounts (incl. savings): ${formatCurrency(accountTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
 }
 
 function renderTransactionList() {
@@ -671,7 +685,7 @@ function renderCharts() {
 
     // 3. Accounts Distribution Doughnut
     const accountLabels = accounts.map(acc => acc.name);
-    const accountBalances = accounts.map(acc => Math.abs(acc.balance));
+    const accountBalances = accounts.map(acc => acc.balance + getSavingsTotalForAccount(acc.id));
     const ctx3 = document.getElementById('accountsDoughnutChart').getContext('2d');
     accountsDoughnutChartInstance = new Chart(ctx3, {
         type: 'doughnut',
