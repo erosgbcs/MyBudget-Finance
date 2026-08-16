@@ -1,14 +1,14 @@
-const CACHE_NAME = 'mybudget-v1';
+const CACHE_NAME = 'mybudget-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/chart.js'
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
-// Install Event - Pre-cache essential resources
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -17,7 +17,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate Event - Clean up outdated caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -32,7 +31,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Serve from cache first, fall back to network
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -40,7 +38,6 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        // Cache external requests dynamically (e.g., Chart.js or dynamic assets)
         if (event.request.method === 'GET' && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -50,7 +47,6 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       });
     }).catch(() => {
-      // Offline fallback handling if required
       return caches.match('./index.html');
     })
   );

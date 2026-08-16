@@ -11,6 +11,7 @@ let loans = JSON.parse(localStorage.getItem('mb_loans')) || [];
 let bills = JSON.parse(localStorage.getItem('mb_bills')) || [];
 let netWorthHistory = JSON.parse(localStorage.getItem('mb_networth_history')) || [];
 let currentFilter = 'all';
+let searchQuery = '';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
 
 // Chart.js instances
@@ -52,13 +53,18 @@ function applyTheme() {
 }
 
 // ---------- Tab Switching ----------
-function switchTab(tabId) {
+function switchTab(tabId, activeNav = tabId) {
+    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.getElementById('tab-' + tabId).classList.add('active');
-    document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-    document.querySelector(`.menu-item[data-tab="${tabId}"]`).classList.add('active');
-    document.getElementById('main-menu').classList.remove('open');
-    // If switching to charts, render charts (ensure they fit container)
+    const targetTab = document.getElementById('tab-' + tabId);
+    if (targetTab) targetTab.classList.add('active');
+
+    // Update bottom nav active state
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const activeNavItem = document.querySelector(`.nav-item[data-tab="${activeNav}"]`);
+    if (activeNavItem) activeNavItem.classList.add('active');
+
+    // If switching to charts, render charts
     if (tabId === 'charts') {
         setTimeout(() => renderCharts(), 100);
     }
@@ -185,8 +191,7 @@ function getMonthlyIncomeExpense() {
     const monthKey = getMonthKey();
     let income = 0, expense = 0;
     transactions.forEach(t => {
-        const tMonth = t.date.slice(0, 7);
-        if (tMonth === monthKey) {
+        if (t.date.slice(0, 7) === monthKey) {
             if (t.amount > 0) income += t.amount;
             else expense += Math.abs(t.amount);
         }
@@ -197,8 +202,7 @@ function getMonthlyIncomeExpense() {
 function getCategorySpending(monthKey) {
     const spending = {};
     transactions.forEach(t => {
-        const tMonth = t.date.slice(0, 7);
-        if (tMonth === monthKey && t.amount < 0) {
+        if (t.date.slice(0, 7) === monthKey && t.amount < 0) {
             const cat = t.category || 'Other';
             spending[cat] = (spending[cat] || 0) + Math.abs(t.amount);
         }
@@ -222,7 +226,6 @@ function recordNetWorthSnapshot() {
         netWorthHistory.push({ date: today, value: getNetWorth() });
         saveNetWorthHistory();
     } else {
-        // Update today's value
         lastEntry.value = getNetWorth();
         saveNetWorthHistory();
     }
@@ -232,98 +235,116 @@ function recordNetWorthSnapshot() {
 function renderAccounts() {
     const container = document.getElementById('accounts-list');
     container.innerHTML = '';
-    accounts.forEach(acc => {
-        const div = document.createElement('div');
-        div.className = 'account-item';
-        div.innerHTML = `
-            <span class="account-name">${acc.name}</span>
-            <span class="account-balance">${formatCurrency(acc.balance)}</span>
-            <button class="delete-btn" data-account-id="${acc.id}">✕</button>
-        `;
-        div.querySelector('.delete-btn').addEventListener('click', () => deleteAccount(acc.id));
-        container.appendChild(div);
-    });
-    const accountSelect = document.getElementById('account');
-    accountSelect.innerHTML = '';
-    accounts.forEach(acc => {
-        const option = document.createElement('option');
-        option.value = acc.id;
-        option.textContent = acc.name;
-        accountSelect.appendChild(option);
-    });
+    if (accounts.length === 0) {
+        container.innerHTML = `<div class="empty-state"><span>💳</span>No accounts yet. Add your first account.</div>`;
+    } else {
+        accounts.forEach(acc => {
+            const div = document.createElement('div');
+            div.className = 'account-item';
+            div.innerHTML = `
+                <span class="account-name">${acc.name}</span>
+                <span class="account-balance">${formatCurrency(acc.balance)}</span>
+                <button class="delete-btn" data-account-id="${acc.id}" aria-label="Delete account">✕</button>
+            `;
+            div.querySelector('.delete-btn').addEventListener('click', () => deleteAccount(acc.id));
+            container.appendChild(div);
+        });
+    }
+    // Populate modal account select
+    const accountSelect = document.getElementById('modal-account');
+    if (accountSelect) {
+        accountSelect.innerHTML = '';
+        accounts.forEach(acc => {
+            const option = document.createElement('option');
+            option.value = acc.id;
+            option.textContent = acc.name;
+            accountSelect.appendChild(option);
+        });
+    }
 }
 
 function renderSavings() {
     const container = document.getElementById('savings-list');
     container.innerHTML = '';
-    savings.forEach(goal => {
-        const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
-        const div = document.createElement('div');
-        div.className = 'savings-item';
-        div.innerHTML = `
-            <div style="flex:1;">
-                <div class="savings-name">${goal.name}</div>
-                <div class="savings-progress">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</div>
-                <div class="progress-bar" style="width:100px;">
-                    <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
+    if (savings.length === 0) {
+        container.innerHTML = `<div class="empty-state"><span>🎯</span>No savings goals yet. Start saving!</div>`;
+    } else {
+        savings.forEach(goal => {
+            const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+            const div = document.createElement('div');
+            div.className = 'savings-item';
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <div class="savings-name">${goal.name}</div>
+                    <div class="savings-progress">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
+                    </div>
                 </div>
-            </div>
-            <input type="number" class="savings-update" value="${goal.current}" step="0.01" style="width:80px;">
-            <button class="delete-btn" data-savings-id="${goal.id}">✕</button>
-        `;
-        const updateInput = div.querySelector('.savings-update');
-        updateInput.addEventListener('change', () => {
-            const newVal = parseFloat(updateInput.value);
-            if (!isNaN(newVal) && newVal >= 0) {
-                updateSavings(goal.id, newVal);
-            }
+                <input type="number" class="savings-update" value="${goal.current}" step="0.01" style="width:80px;">
+                <button class="delete-btn" data-savings-id="${goal.id}" aria-label="Delete goal">✕</button>
+            `;
+            const updateInput = div.querySelector('.savings-update');
+            updateInput.addEventListener('change', () => {
+                const newVal = parseFloat(updateInput.value);
+                if (!isNaN(newVal) && newVal >= 0) {
+                    updateSavings(goal.id, newVal);
+                }
+            });
+            div.querySelector('.delete-btn').addEventListener('click', () => deleteSavingsGoal(goal.id));
+            container.appendChild(div);
         });
-        div.querySelector('.delete-btn').addEventListener('click', () => deleteSavingsGoal(goal.id));
-        container.appendChild(div);
-    });
+    }
 }
 
 function renderLoans() {
     const container = document.getElementById('loans-list');
     container.innerHTML = '';
-    loans.forEach(loan => {
-        const div = document.createElement('div');
-        div.className = 'loan-item';
-        const label = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
-        div.innerHTML = `
-            <span class="loan-name">${loan.name} <small>(${label})</small></span>
-            <span class="loan-amount">${formatCurrency(loan.amount)}</span>
-            <button class="delete-btn" data-loan-id="${loan.id}">✕</button>
-        `;
-        div.querySelector('.delete-btn').addEventListener('click', () => deleteLoan(loan.id));
-        container.appendChild(div);
-    });
+    if (loans.length === 0) {
+        container.innerHTML = `<div class="empty-state"><span>🏦</span>No loans recorded.</div>`;
+    } else {
+        loans.forEach(loan => {
+            const div = document.createElement('div');
+            div.className = 'loan-item';
+            const label = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
+            div.innerHTML = `
+                <span class="loan-name">${loan.name} <small>(${label})</small></span>
+                <span class="loan-amount">${formatCurrency(loan.amount)}</span>
+                <button class="delete-btn" data-loan-id="${loan.id}" aria-label="Delete loan">✕</button>
+            `;
+            div.querySelector('.delete-btn').addEventListener('click', () => deleteLoan(loan.id));
+            container.appendChild(div);
+        });
+    }
 }
 
 function renderBills() {
     const container = document.getElementById('bills-list');
     container.innerHTML = '';
-    // Sort bills by due date (closest first)
-    const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-    sortedBills.forEach(bill => {
-        const div = document.createElement('div');
-        div.className = 'bill-item';
-        const dueDate = new Date(bill.dueDate + 'T00:00:00');
-        const dueFormatted = dueDate.toLocaleDateString();
-        const isPast = dueDate < new Date() && !bill.paid;
-        div.innerHTML = `
-            <div style="flex:1;">
-                <div class="bill-name">${bill.name} ${isPast ? '⚠️' : ''}</div>
-                <div class="bill-due">Due: ${dueFormatted}</div>
-            </div>
-            <span class="bill-amount">${formatCurrency(bill.amount)}</span>
-            <button class="delete-btn" data-bill-id="${bill.id}">✕</button>
-            <button class="paid-btn" data-bill-id="${bill.id}">${bill.paid ? '↩️' : '✅'}</button>
-        `;
-        div.querySelector('.delete-btn').addEventListener('click', () => deleteBill(bill.id));
-        div.querySelector('.paid-btn').addEventListener('click', () => toggleBillPaid(bill.id));
-        container.appendChild(div);
-    });
+    if (bills.length === 0) {
+        container.innerHTML = `<div class="empty-state"><span>🧾</span>No upcoming bills.</div>`;
+    } else {
+        const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        sortedBills.forEach(bill => {
+            const div = document.createElement('div');
+            div.className = 'bill-item';
+            const dueDate = new Date(bill.dueDate + 'T00:00:00');
+            const dueFormatted = dueDate.toLocaleDateString();
+            const isPast = dueDate < new Date() && !bill.paid;
+            div.innerHTML = `
+                <div style="flex:1;">
+                    <div class="bill-name">${bill.name} ${isPast ? '⚠️' : ''}</div>
+                    <div class="bill-due">Due: ${dueFormatted}</div>
+                </div>
+                <span class="bill-amount">${formatCurrency(bill.amount)}</span>
+                <button class="paid-btn" data-bill-id="${bill.id}" aria-label="Toggle paid">${bill.paid ? '↩️' : '✅'}</button>
+                <button class="delete-btn" data-bill-id="${bill.id}" aria-label="Delete bill">✕</button>
+            `;
+            div.querySelector('.delete-btn').addEventListener('click', () => deleteBill(bill.id));
+            div.querySelector('.paid-btn').addEventListener('click', () => toggleBillPaid(bill.id));
+            container.appendChild(div);
+        });
+    }
 }
 
 function renderSummary() {
@@ -333,7 +354,6 @@ function renderSummary() {
     document.getElementById('total-income').textContent = formatCurrency(income);
     document.getElementById('total-expense').textContent = formatCurrency(expense);
 
-    // Net Worth
     const netWorth = getNetWorth();
     document.getElementById('net-worth').textContent = formatCurrency(netWorth);
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
@@ -348,10 +368,20 @@ function renderTransactionList() {
     const list = document.getElementById('transaction-list');
     list.innerHTML = '';
     const filtered = transactions.filter(t => {
-        if (currentFilter === 'income') return t.amount > 0;
-        if (currentFilter === 'expense') return t.amount < 0;
-        return true;
+        const matchesFilter = currentFilter === 'all' || 
+            (currentFilter === 'income' && t.amount > 0) || 
+            (currentFilter === 'expense' && t.amount < 0);
+        const searchLower = searchQuery.toLowerCase();
+        const matchesSearch = t.description.toLowerCase().includes(searchLower) || 
+                              (t.category && t.category.toLowerCase().includes(searchLower));
+        return matchesFilter && matchesSearch;
     });
+
+    if (filtered.length === 0) {
+        list.innerHTML = `<li><div class="empty-state"><span>💸</span>No transactions found.</div></li>`;
+        return;
+    }
+
     filtered.forEach(t => {
         const li = document.createElement('li');
         li.className = t.amount > 0 ? 'income' : 'expense';
@@ -365,7 +395,7 @@ function renderTransactionList() {
             <span class="transaction-amount ${t.amount > 0 ? 'income' : 'expense'}">
                 ${t.amount > 0 ? '+' : '-'}${formatCurrency(Math.abs(t.amount))}
             </span>
-            <button class="delete-btn" data-id="${t.id}">✕</button>
+            <button class="delete-btn" data-id="${t.id}" aria-label="Delete transaction">✕</button>
         `;
         li.querySelector('.delete-btn').addEventListener('click', () => deleteTransaction(t.id));
         list.appendChild(li);
@@ -376,6 +406,10 @@ function renderTransactionPreview() {
     const list = document.getElementById('transaction-list-preview');
     list.innerHTML = '';
     const recent = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    if (recent.length === 0) {
+        list.innerHTML = `<li><div class="empty-state"><span>📭</span>No transactions yet.</div></li>`;
+        return;
+    }
     recent.forEach(t => {
         const li = document.createElement('li');
         li.className = t.amount > 0 ? 'income' : 'expense';
@@ -398,7 +432,13 @@ function renderBudgets() {
     const container = document.getElementById('budget-progress');
     container.innerHTML = '';
     const monthBudgets = budgets[monthKey] || {};
-    for (const [category, limit] of Object.entries(monthBudgets)) {
+    const categories = Object.keys(monthBudgets);
+    if (categories.length === 0) {
+        container.innerHTML = `<div class="empty-state"><span>📊</span>No budgets set for this month.</div>`;
+        return;
+    }
+    categories.forEach(category => {
+        const limit = monthBudgets[category];
         const spent = spending[category] || 0;
         const percent = limit > 0 ? (spent / limit) * 100 : 0;
         const over = percent >= 100;
@@ -415,17 +455,15 @@ function renderBudgets() {
             </div>
         `;
         container.appendChild(div);
-    }
+    });
 }
 
 // ---------- Charts ----------
 function renderCharts() {
-    // Destroy existing charts to avoid memory leaks
     if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
     if (categoryPieChartInstance) categoryPieChartInstance.destroy();
     if (netWorthChartInstance) netWorthChartInstance.destroy();
 
-    // Prepare data for income/expense chart (last 6 months)
     const months = [];
     const incomeData = [];
     const expenseData = [];
@@ -445,7 +483,6 @@ function renderCharts() {
         expenseData.push(exp);
     }
 
-    // Income/Expense chart
     const ctx1 = document.getElementById('incomeExpenseChart').getContext('2d');
     incomeExpenseChartInstance = new Chart(ctx1, {
         type: 'bar',
@@ -457,30 +494,34 @@ function renderCharts() {
                     data: incomeData,
                     backgroundColor: 'rgba(22, 163, 74, 0.6)',
                     borderColor: 'rgba(22, 163, 74, 1)',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: 6,
                 },
                 {
                     label: 'Expense',
                     data: expenseData,
                     backgroundColor: 'rgba(220, 38, 38, 0.6)',
                     borderColor: 'rgba(220, 38, 38, 1)',
-                    borderWidth: 1
+                    borderWidth: 1,
+                    borderRadius: 6,
                 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { callback: value => '₱' + value }
-                }
+                    ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
             }
         }
     });
 
-    // Category pie chart for current month
     const currentMonthKey = getMonthKey();
     const categorySpending = getCategorySpending(currentMonthKey);
     const categories = Object.keys(categorySpending);
@@ -508,13 +549,10 @@ function renderCharts() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
-            }
+            plugins: { legend: { position: 'bottom', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } }
         }
     });
 
-    // Net worth history chart
     if (netWorthHistory.length > 0) {
         const dates = netWorthHistory.map(entry => entry.date);
         const values = netWorthHistory.map(entry => entry.value);
@@ -529,17 +567,21 @@ function renderCharts() {
                     borderColor: 'rgba(139, 92, 246, 1)',
                     backgroundColor: 'rgba(139, 92, 246, 0.2)',
                     fill: true,
-                    tension: 0.1
+                    tension: 0.3,
+                    pointRadius: 3,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
                 scales: {
                     y: {
                         beginAtZero: false,
-                        ticks: { callback: value => '₱' + value }
-                    }
+                        ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+                        grid: { color: 'rgba(255,255,255,0.1)' }
+                    },
+                    x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
                 }
             }
         });
@@ -555,11 +597,23 @@ function renderAll() {
     renderTransactionList();
     renderTransactionPreview();
     renderBudgets();
-    // Note: charts are rendered when Charts tab is active, or can be rendered here if needed.
-    // We'll render charts on demand in switchTab and also after data changes if Charts tab is active.
+    recordNetWorthSnapshot(); // Automatically updates net worth history
+
+    // Re-render charts if they are visible
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }
+}
+
+// ---------- Modal Functions ----------
+function openTransactionModal() {
+    document.getElementById('transaction-modal').classList.add('open');
+    document.getElementById('modal-description').focus();
+}
+
+function closeTransactionModal() {
+    document.getElementById('transaction-modal').classList.remove('open');
+    document.getElementById('transaction-form').reset();
 }
 
 // ---------- Event Listeners ----------
@@ -569,21 +623,58 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
     applyTheme();
 });
 
-document.getElementById('menu-toggle').addEventListener('click', () => {
-    document.getElementById('main-menu').classList.toggle('open');
-});
-
-document.querySelectorAll('.menu-item').forEach(item => {
+// Bottom navigation
+document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         const tabId = item.dataset.tab;
-        switchTab(tabId);
+        switchTab(tabId, tabId);
     });
 });
 
+// FAB and modal triggers
+document.getElementById('fab-add-transaction').addEventListener('click', openTransactionModal);
+document.getElementById('open-modal-btn').addEventListener('click', openTransactionModal);
+document.getElementById('close-modal').addEventListener('click', closeTransactionModal);
+document.getElementById('transaction-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('transaction-modal')) closeTransactionModal();
+});
+
+// Modal form submit
+document.getElementById('transaction-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const desc = document.getElementById('modal-description').value.trim();
+    const amount = parseFloat(document.getElementById('modal-amount').value);
+    const type = document.getElementById('modal-type').value;
+    const category = document.getElementById('modal-category').value;
+    const accountId = document.getElementById('modal-account').value;
+    if (!desc || isNaN(amount) || amount <= 0) {
+        alert('Please enter a valid description and amount');
+        return;
+    }
+    addTransaction(desc, amount, type, category, accountId);
+    closeTransactionModal();
+});
+
+// More grid items
+document.querySelectorAll('.more-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const target = item.dataset.tabTarget;
+        switchTab(target, 'more');
+    });
+});
+
+// View all transactions
 document.getElementById('view-all-transactions').addEventListener('click', () => {
     switchTab('transactions');
 });
 
+// Search transactions
+document.getElementById('search-transactions').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderTransactionList();
+});
+
+// Account operations
 document.getElementById('add-account-btn').addEventListener('click', () => {
     const nameInput = document.getElementById('new-account-name');
     const name = nameInput.value.trim();
@@ -593,6 +684,7 @@ document.getElementById('add-account-btn').addEventListener('click', () => {
     }
 });
 
+// Savings operations
 document.getElementById('add-savings-btn').addEventListener('click', () => {
     const name = document.getElementById('savings-name').value.trim();
     const target = parseFloat(document.getElementById('savings-target').value);
@@ -607,6 +699,7 @@ document.getElementById('add-savings-btn').addEventListener('click', () => {
     }
 });
 
+// Loan operations
 document.getElementById('add-loan-btn').addEventListener('click', () => {
     const name = document.getElementById('loan-name').value.trim();
     const amount = parseFloat(document.getElementById('loan-amount').value);
@@ -620,6 +713,7 @@ document.getElementById('add-loan-btn').addEventListener('click', () => {
     }
 });
 
+// Bill operations
 document.getElementById('add-bill-btn').addEventListener('click', () => {
     const name = document.getElementById('bill-name').value.trim();
     const amount = parseFloat(document.getElementById('bill-amount').value);
@@ -634,21 +728,7 @@ document.getElementById('add-bill-btn').addEventListener('click', () => {
     }
 });
 
-document.getElementById('add-transaction-btn').addEventListener('click', () => {
-    const desc = document.getElementById('description').value.trim();
-    const amount = parseFloat(document.getElementById('amount').value);
-    const type = document.getElementById('type').value;
-    const category = document.getElementById('category').value;
-    const accountId = document.getElementById('account').value;
-    if (!desc || isNaN(amount) || amount <= 0) {
-        alert('Please enter a valid description and amount');
-        return;
-    }
-    addTransaction(desc, amount, type, category, accountId);
-    document.getElementById('description').value = '';
-    document.getElementById('amount').value = '';
-});
-
+// Budget operations
 document.getElementById('set-budget-btn').addEventListener('click', () => {
     const category = document.getElementById('budget-category').value;
     const limit = parseFloat(document.getElementById('budget-amount').value);
@@ -660,6 +740,7 @@ document.getElementById('set-budget-btn').addEventListener('click', () => {
     document.getElementById('budget-amount').value = '';
 });
 
+// Filters
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -669,22 +750,11 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// Close menu when clicking outside
-document.addEventListener('click', (e) => {
-    const menu = document.getElementById('main-menu');
-    const toggle = document.getElementById('menu-toggle');
-    if (!menu.contains(e.target) && e.target !== toggle) {
-        menu.classList.remove('open');
-    }
-});
-
 // ---------- Initialize ----------
 function initialize() {
     applyTheme();
     renderAll();
-    // Record net worth snapshot for today
-    recordNetWorthSnapshot();
-    // If charts tab is active initially, render charts (unlikely, but safe)
+    // If charts tab is active initially (unlikely), render charts
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }

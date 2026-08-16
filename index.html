@@ -7,28 +7,18 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1976d2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js for charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <button id="menu-toggle" class="menu-toggle">☰</button>
-            <h1>💰 MyBudget-Finance</h1>
-            <button id="theme-toggle" class="theme-toggle">🌙</button>
+            <h1>💰 MyBudget</h1>
+            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
         </header>
-
-        <!-- Dropdown Menu -->
-        <nav id="main-menu" class="main-menu glass">
-            <button class="menu-item active" data-tab="home">🏠 Home</button>
-            <button class="menu-item" data-tab="accounts">💳 Accounts</button>
-            <button class="menu-item" data-tab="savings">🎯 Savings</button>
-            <button class="menu-item" data-tab="loans">🏦 Loans</button>
-            <button class="menu-item" data-tab="transactions">💸 Transactions</button>
-            <button class="menu-item" data-tab="budget">📊 Budget</button>
-            <button class="menu-item" data-tab="bills">🧾 Bills</button>
-            <button class="menu-item" data-tab="charts">📈 Charts</button>
-        </nav>
 
         <!-- HOME TAB -->
         <div class="tab-content active" id="tab-home">
@@ -38,24 +28,74 @@
                     <h2 id="balance">₱0.00</h2>
                 </div>
                 <div class="card glass income">
-                    <p>Income (This Month)</p>
+                    <p>Income</p>
                     <h3 id="total-income">₱0.00</h3>
                 </div>
                 <div class="card glass expense">
-                    <p>Expenses (This Month)</p>
+                    <p>Expenses</p>
                     <h3 id="total-expense">₱0.00</h3>
                 </div>
             </div>
-            <!-- Net Worth Card -->
             <div class="card glass net-worth-card">
                 <p>💎 Net Worth</p>
                 <h2 id="net-worth">₱0.00</h2>
                 <small id="net-worth-breakdown"></small>
             </div>
             <div class="section glass">
-                <h2>Recent Transactions</h2>
+                <div class="section-header">
+                    <h2>Recent Transactions</h2>
+                    <button class="btn btn-small" id="view-all-transactions">View All</button>
+                </div>
                 <ul id="transaction-list-preview" class="transaction-list"></ul>
-                <button class="btn" id="view-all-transactions">View All</button>
+            </div>
+        </div>
+
+        <!-- TRANSACTIONS TAB -->
+        <div class="tab-content" id="tab-transactions">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>💸 Transactions</h2>
+                    <button class="btn btn-small" id="open-modal-btn">+ Add</button>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="search-transactions" placeholder="Search by description or category...">
+                </div>
+                <div class="filters">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="income">Income</button>
+                    <button class="filter-btn" data-filter="expense">Expenses</button>
+                </div>
+                <ul id="transaction-list" class="transaction-list"></ul>
+            </div>
+        </div>
+
+        <!-- CHARTS TAB -->
+        <div class="tab-content" id="tab-charts">
+            <div class="section glass">
+                <h2>📈 Financial Summary</h2>
+                <div class="chart-container">
+                    <canvas id="incomeExpenseChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="netWorthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- MORE TAB -->
+        <div class="tab-content" id="tab-more">
+            <div class="section glass">
+                <h2>More</h2>
+                <div class="more-grid">
+                    <button class="more-item" data-tab-target="accounts">💳<span>Accounts</span></button>
+                    <button class="more-item" data-tab-target="savings">🎯<span>Savings</span></button>
+                    <button class="more-item" data-tab-target="loans">🏦<span>Loans</span></button>
+                    <button class="more-item" data-tab-target="bills">🧾<span>Bills</span></button>
+                    <button class="more-item" data-tab-target="budget">📊<span>Budget</span></button>
+                </div>
             </div>
         </div>
 
@@ -102,42 +142,17 @@
             </div>
         </div>
 
-        <!-- TRANSACTIONS TAB -->
-        <div class="tab-content" id="tab-transactions">
+        <!-- BILLS TAB -->
+        <div class="tab-content" id="tab-bills">
             <div class="section glass">
-                <h2>Add Transaction</h2>
-                <input type="text" id="description" placeholder="Description">
-                <input type="number" id="amount" placeholder="Amount" step="0.01">
+                <h2>🧾 Upcoming Bills</h2>
                 <div class="row">
-                    <select id="type">
-                        <option value="expense">Expense</option>
-                        <option value="income">Income</option>
-                    </select>
-                    <select id="category">
-                        <option value="Food">Food</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Bills">Bills</option>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Health">Health</option>
-                        <option value="Salary">Salary</option>
-                        <option value="Other Income">Other Income</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <select id="account">
-                        <!-- Populated dynamically -->
-                    </select>
+                    <input type="text" id="bill-name" placeholder="Bill description">
+                    <input type="number" id="bill-amount" placeholder="Amount" step="0.01">
+                    <input type="date" id="bill-due-date">
+                    <button id="add-bill-btn" class="btn">+ Add Bill</button>
                 </div>
-                <button id="add-transaction-btn" class="btn">Add Transaction</button>
-            </div>
-            <div class="section glass">
-                <h2>Recent Transactions</h2>
-                <div class="filters">
-                    <button class="filter-btn active" data-filter="all">All</button>
-                    <button class="filter-btn" data-filter="income">Income</button>
-                    <button class="filter-btn" data-filter="expense">Expenses</button>
-                </div>
-                <ul id="transaction-list" class="transaction-list"></ul>
+                <div id="bills-list"></div>
             </div>
         </div>
 
@@ -163,33 +178,47 @@
             </div>
         </div>
 
-        <!-- BILLS TAB -->
-        <div class="tab-content" id="tab-bills">
-            <div class="section glass">
-                <h2>🧾 Upcoming Bills</h2>
-                <div class="row">
-                    <input type="text" id="bill-name" placeholder="Bill description">
-                    <input type="number" id="bill-amount" placeholder="Amount" step="0.01">
-                    <input type="date" id="bill-due-date">
-                    <button id="add-bill-btn" class="btn">+ Add Bill</button>
-                </div>
-                <div id="bills-list"></div>
-            </div>
-        </div>
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav" aria-label="Main navigation">
+            <button class="nav-item active" data-tab="home">🏠<span>Home</span></button>
+            <button class="nav-item" data-tab="transactions">💸<span>Transactions</span></button>
+            <button class="nav-fab" id="fab-add-transaction" aria-label="Add transaction">＋</button>
+            <button class="nav-item" data-tab="charts">📈<span>Charts</span></button>
+            <button class="nav-item" data-tab="more">⋯<span>More</span></button>
+        </nav>
 
-        <!-- CHARTS TAB -->
-        <div class="tab-content" id="tab-charts">
-            <div class="section glass">
-                <h2>📈 Financial Summary Charts</h2>
-                <div class="chart-container">
-                    <canvas id="incomeExpenseChart"></canvas>
+        <!-- Transaction Modal -->
+        <div id="transaction-modal" class="modal-overlay">
+            <div class="modal glass">
+                <div class="modal-header">
+                    <h2>Add Transaction</h2>
+                    <button class="modal-close" id="close-modal">✕</button>
                 </div>
-                <div class="chart-container">
-                    <canvas id="categoryPieChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="netWorthChart"></canvas>
-                </div>
+                <form id="transaction-form">
+                    <input type="text" id="modal-description" placeholder="Description" required>
+                    <input type="number" id="modal-amount" placeholder="Amount" step="0.01" required>
+                    <div class="row">
+                        <select id="modal-type">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                        <select id="modal-category">
+                            <option value="Food">Food</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Bills">Bills</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Health">Health</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Other Income">Other Income</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <select id="modal-account">
+                        <!-- Populated dynamically -->
+                    </select>
+                    <button type="submit" class="btn">Add Transaction</button>
+                </form>
             </div>
         </div>
     </div>
