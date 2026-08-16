@@ -1,10 +1,13 @@
 // ---------- Data Structures ----------
 let accounts = JSON.parse(localStorage.getItem('mb_accounts')) || [
     { id: 'acc1', name: 'GCash', balance: 0 },
-    { id: 'acc2', name: 'Maribank', balance: 0 }
+    { id: 'acc2', name: 'Maribank', balance: 0 },
+    { id: 'acc3', name: 'Cash', balance: 0 }   // Added Cash account
 ];
 let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
-let budgets = JSON.parse(localStorage.getItem('mb_budgets')) || {}; // { monthKey: { category: limit } }
+let budgets = JSON.parse(localStorage.getItem('mb_budgets')) || {};
+let savings = JSON.parse(localStorage.getItem('mb_savings')) || [];
+let loans = JSON.parse(localStorage.getItem('mb_loans')) || [];
 let currentFilter = 'all';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
 
@@ -17,6 +20,12 @@ function saveTransactions() {
 }
 function saveBudgets() {
     localStorage.setItem('mb_budgets', JSON.stringify(budgets));
+}
+function saveSavings() {
+    localStorage.setItem('mb_savings', JSON.stringify(savings));
+}
+function saveLoans() {
+    localStorage.setItem('mb_loans', JSON.stringify(loans));
 }
 function saveTheme() {
     localStorage.setItem('mb_theme', isDarkMode ? 'dark' : 'light');
@@ -42,7 +51,7 @@ function applyTheme() {
     }
 }
 
-// ---------- Core Operations ----------
+// ---------- Account Operations ----------
 function addAccount(name) {
     const id = 'acc' + Date.now();
     accounts.push({ id, name, balance: 0 });
@@ -60,6 +69,44 @@ function deleteAccount(id) {
     renderAccounts();
 }
 
+// ---------- Savings Goals Operations ----------
+function addSavingsGoal(name, target, current) {
+    const id = 'sav' + Date.now();
+    savings.push({ id, name, target, current });
+    saveSavings();
+    renderSavings();
+}
+
+function updateSavings(id, newCurrent) {
+    const goal = savings.find(s => s.id === id);
+    if (goal) {
+        goal.current = Math.max(0, newCurrent); // no negative
+        saveSavings();
+        renderSavings();
+    }
+}
+
+function deleteSavingsGoal(id) {
+    savings = savings.filter(s => s.id !== id);
+    saveSavings();
+    renderSavings();
+}
+
+// ---------- Loans Operations ----------
+function addLoan(name, amount, type) {
+    const id = 'loan' + Date.now();
+    loans.push({ id, name, amount, type });
+    saveLoans();
+    renderLoans();
+}
+
+function deleteLoan(id) {
+    loans = loans.filter(l => l.id !== id);
+    saveLoans();
+    renderLoans();
+}
+
+// ---------- Transaction Operations ----------
 function addTransaction(description, amount, type, category, accountId) {
     const signedAmount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
     const transaction = {
@@ -71,7 +118,6 @@ function addTransaction(description, amount, type, category, accountId) {
         date: new Date().toISOString()
     };
     transactions.push(transaction);
-    // Update account balance
     const account = accounts.find(acc => acc.id === accountId);
     if (account) {
         account.balance += signedAmount;
@@ -84,7 +130,6 @@ function addTransaction(description, amount, type, category, accountId) {
 function deleteTransaction(id) {
     const transaction = transactions.find(t => t.id === id);
     if (transaction) {
-        // Reverse balance change
         const account = accounts.find(acc => acc.id === transaction.accountId);
         if (account) {
             account.balance -= transaction.amount;
@@ -146,7 +191,7 @@ function renderAccounts() {
         div.querySelector('.delete-btn').addEventListener('click', () => deleteAccount(acc.id));
         container.appendChild(div);
     });
-    // Update account select in transaction form
+    // Update account select
     const accountSelect = document.getElementById('account');
     accountSelect.innerHTML = '';
     accounts.forEach(acc => {
@@ -154,6 +199,54 @@ function renderAccounts() {
         option.value = acc.id;
         option.textContent = acc.name;
         accountSelect.appendChild(option);
+    });
+}
+
+function renderSavings() {
+    const container = document.getElementById('savings-list');
+    container.innerHTML = '';
+    savings.forEach(goal => {
+        const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+        const div = document.createElement('div');
+        div.className = 'savings-item';
+        div.innerHTML = `
+            <div style="flex:1;">
+                <div class="savings-name">${goal.name}</div>
+                <div class="savings-progress">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</div>
+                <div class="progress-bar" style="width:100px;">
+                    <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
+                </div>
+            </div>
+            <input type="number" class="savings-update" value="${goal.current}" step="0.01" style="width:80px;">
+            <button class="delete-btn" data-savings-id="${goal.id}">✕</button>
+        `;
+        // Update button for current amount
+        const updateInput = div.querySelector('.savings-update');
+        updateInput.addEventListener('change', () => {
+            const newVal = parseFloat(updateInput.value);
+            if (!isNaN(newVal) && newVal >= 0) {
+                updateSavings(goal.id, newVal);
+            }
+        });
+        div.querySelector('.delete-btn').addEventListener('click', () => deleteSavingsGoal(goal.id));
+        container.appendChild(div);
+    });
+}
+
+function renderLoans() {
+    const container = document.getElementById('loans-list');
+    container.innerHTML = '';
+    loans.forEach(loan => {
+        const div = document.createElement('div');
+        div.className = 'loan-item';
+        const label = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
+        div.innerHTML = `
+            <span class="loan-name">${loan.name} <small>(${label})</small></span>
+            <span class="loan-amount">${formatCurrency(loan.amount)}</span>
+            <button class="delete-btn" data-loan-id="${loan.id}">✕</button>
+        `;
+        div.querySelector('.delete-btn').addEventListener('click', () => deleteLoan(loan.id));
+        container.appendChild(div);
     });
 }
 
@@ -220,6 +313,8 @@ function renderBudgets() {
 
 function renderAll() {
     renderAccounts();
+    renderSavings();
+    renderLoans();
     renderSummary();
     renderTransactionList();
     renderBudgets();
@@ -238,6 +333,33 @@ document.getElementById('add-account-btn').addEventListener('click', () => {
     if (name) {
         addAccount(name);
         nameInput.value = '';
+    }
+});
+
+document.getElementById('add-savings-btn').addEventListener('click', () => {
+    const name = document.getElementById('savings-name').value.trim();
+    const target = parseFloat(document.getElementById('savings-target').value);
+    const current = parseFloat(document.getElementById('savings-current').value) || 0;
+    if (name && !isNaN(target) && target > 0) {
+        addSavingsGoal(name, target, current);
+        document.getElementById('savings-name').value = '';
+        document.getElementById('savings-target').value = '';
+        document.getElementById('savings-current').value = '';
+    } else {
+        alert('Please enter a valid goal name and target amount.');
+    }
+});
+
+document.getElementById('add-loan-btn').addEventListener('click', () => {
+    const name = document.getElementById('loan-name').value.trim();
+    const amount = parseFloat(document.getElementById('loan-amount').value);
+    const type = document.getElementById('loan-type').value;
+    if (name && !isNaN(amount) && amount > 0) {
+        addLoan(name, amount, type);
+        document.getElementById('loan-name').value = '';
+        document.getElementById('loan-amount').value = '';
+    } else {
+        alert('Please enter a valid loan description and amount.');
     }
 });
 

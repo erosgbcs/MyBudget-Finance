@@ -25,6 +25,33 @@
             </div>
         </div>
 
+        <!-- Savings Goals Section -->
+        <div class="section glass">
+            <h2>🎯 Savings Goals</h2>
+            <div class="row">
+                <input type="text" id="savings-name" placeholder="Goal name">
+                <input type="number" id="savings-target" placeholder="Target amount" step="0.01">
+                <input type="number" id="savings-current" placeholder="Already saved" step="0.01">
+                <button id="add-savings-btn" class="btn">+ Add Goal</button>
+            </div>
+            <div id="savings-list"></div>
+        </div>
+
+        <!-- Loans Section -->
+        <div class="section glass">
+            <h2>🏦 Loans</h2>
+            <div class="row">
+                <input type="text" id="loan-name" placeholder="Loan description">
+                <input type="number" id="loan-amount" placeholder="Amount" step="0.01">
+                <select id="loan-type">
+                    <option value="borrowed">I Owe (Borrowed)</option>
+                    <option value="lent">Owed to Me (Lent)</option>
+                </select>
+                <button id="add-loan-btn" class="btn">+ Add Loan</button>
+            </div>
+            <div id="loans-list"></div>
+        </div>
+
         <!-- Summary Cards -->
         <div class="summary">
             <div class="card glass balance">
