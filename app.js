@@ -20,7 +20,7 @@ let currentPalette = localStorage.getItem('mb_palette') || 'default';
 let fontSize = localStorage.getItem('mb_font_size') || 'medium';
 let density = localStorage.getItem('mb_density') || 'comfortable';
 let notificationsEnabled = localStorage.getItem('mb_notifications') === 'true';
-
+let lastKnownDate = new Date().toDateString(); // e.g., "Mon Aug 17 2026"
 // Chart.js instances
 let incomeExpenseChartInstance = null;
 let categoryPieChartInstance = null;
@@ -1036,7 +1036,26 @@ function updateBillBadge() {
         }
     }
 }
-
+function checkForDateChange() {
+    const now = new Date();
+    const todayString = now.toDateString();
+    if (todayString !== lastKnownDate) {
+        // Day or month changed
+        lastKnownDate = todayString;
+        // Re-render everything to reflect new month/day
+        renderAll();
+        // Also update bill reminders (badge, notifications)
+        updateBillBadge();
+        // If charts tab is active, refresh charts
+        if (document.getElementById('tab-charts').classList.contains('active')) {
+            renderCharts();
+        }
+        if (document.getElementById('tab-budget').classList.contains('active')) {
+            renderBudgetChart();
+        }
+        console.log('Date changed, refreshed app at', now.toLocaleString());
+    }
+}
 // ---------- Modal Functions ----------
 function openTransactionModal() {
     document.getElementById('transaction-modal').classList.add('open');
@@ -1293,6 +1312,7 @@ function initialize() {
     saveSavings();
     applyTheme();
     renderAll();
+    setInterval(checkForDateChange, 60 * 1000);
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }
