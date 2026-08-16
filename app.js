@@ -13,12 +13,13 @@ let netWorthHistory = JSON.parse(localStorage.getItem('mb_networth_history')) ||
 let currentFilter = 'all';
 let searchQuery = '';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
-let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass'; // NEW: theme style
+let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass';
 
 // Chart.js instances
 let incomeExpenseChartInstance = null;
 let categoryPieChartInstance = null;
 let netWorthChartInstance = null;
+let accountsDoughnutChartInstance = null; // NEW
 
 // ---------- Save Functions ----------
 function saveAccounts() { localStorage.setItem('mb_accounts', JSON.stringify(accounts)); }
@@ -36,14 +37,12 @@ function formatCurrency(val) {
     return '₱' + Math.abs(val).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// NEW: Return CSS class for positive/negative/zero
 function getAmountClass(value) {
     if (value > 0) return 'positive';
     if (value < 0) return 'negative';
     return '';
 }
 
-// NEW: Format currency with color-coded sign and class
 function formatCurrencyWithColor(val) {
     const cls = getAmountClass(val);
     const formatted = formatCurrency(val);
@@ -61,7 +60,6 @@ function getMonthKeyFromDate(date) {
 
 // ---------- Theme ----------
 function applyTheme() {
-    // Dark mode class
     if (isDarkMode) {
         document.body.classList.add('dark-theme');
         document.getElementById('theme-toggle').textContent = '☀️';
@@ -70,16 +68,12 @@ function applyTheme() {
         document.getElementById('theme-toggle').textContent = '🌙';
     }
 
-    // Theme style attribute
     document.body.setAttribute('data-theme', currentThemeStyle);
-
-    // Update active button in theme options
     document.querySelectorAll('.theme-option-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.themeStyle === currentThemeStyle);
     });
 }
 
-// NEW: Change UI theme style
 function setThemeStyle(style) {
     if (!['glass', 'neumorphism', 'normal'].includes(style)) return;
     currentThemeStyle = style;
@@ -89,17 +83,14 @@ function setThemeStyle(style) {
 
 // ---------- Tab Switching ----------
 function switchTab(tabId, activeNav = tabId) {
-    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) targetTab.classList.add('active');
 
-    // Update bottom nav active state
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     const activeNavItem = document.querySelector(`.nav-item[data-tab="${activeNav}"]`);
     if (activeNavItem) activeNavItem.classList.add('active');
 
-    // If switching to charts, render charts
     if (tabId === 'charts') {
         setTimeout(() => renderCharts(), 100);
     }
@@ -271,12 +262,11 @@ function renderAccounts() {
     const container = document.getElementById('accounts-list');
     container.innerHTML = '';
     if (accounts.length === 0) {
-        container.innerHTML = `<div class="empty-state"><span>💳</span>No accounts yet. Add your first account.</div>`;
+        container.innerHTML = `<div class="empty-state">No accounts yet. Add your first account.</div>`;
     } else {
         accounts.forEach(acc => {
             const div = document.createElement('div');
             div.className = 'account-item';
-            // Updated: color-coded balance
             div.innerHTML = `
                 <span class="account-name">${acc.name}</span>
                 <span class="account-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
@@ -286,7 +276,6 @@ function renderAccounts() {
             container.appendChild(div);
         });
     }
-    // Populate modal account select
     const accountSelect = document.getElementById('modal-account');
     if (accountSelect) {
         accountSelect.innerHTML = '';
@@ -297,7 +286,6 @@ function renderAccounts() {
             accountSelect.appendChild(option);
         });
     }
-    // Populate savings account select
     const savingsAccountSelect = document.getElementById('savings-account');
     if (savingsAccountSelect) {
         savingsAccountSelect.innerHTML = '';
@@ -310,11 +298,31 @@ function renderAccounts() {
     }
 }
 
+// NEW: Render Account Balances on Home
+function renderAccountBalances() {
+    const container = document.getElementById('account-balances-list');
+    if (!container) return;
+    container.innerHTML = '';
+    if (accounts.length === 0) {
+        container.innerHTML = '<div class="empty-state">No accounts yet.</div>';
+        return;
+    }
+    accounts.forEach(acc => {
+        const div = document.createElement('div');
+        div.className = 'account-summary-item';
+        div.innerHTML = `
+            <span class="account-summary-name">${acc.name}</span>
+            <span class="account-summary-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
+        `;
+        container.appendChild(div);
+    });
+}
+
 function renderSavings() {
     const container = document.getElementById('savings-list');
     container.innerHTML = '';
     if (savings.length === 0) {
-        container.innerHTML = `<div class="empty-state"><span>🎯</span>No savings goals yet. Start saving!</div>`;
+        container.innerHTML = `<div class="empty-state">No savings goals yet. Start saving!</div>`;
     } else {
         savings.forEach(goal => {
             const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
@@ -322,7 +330,6 @@ function renderSavings() {
             const accountName = account ? account.name : 'No account';
             const div = document.createElement('div');
             div.className = 'savings-item';
-            // Optional: color-code current amount (positive)
             div.innerHTML = `
                 <div style="flex:1;">
                     <div class="savings-name">${goal.name} <small>(${accountName})</small></div>
@@ -353,13 +360,12 @@ function renderLoans() {
     const container = document.getElementById('loans-list');
     container.innerHTML = '';
     if (loans.length === 0) {
-        container.innerHTML = `<div class="empty-state"><span>🏦</span>No loans recorded.</div>`;
+        container.innerHTML = `<div class="empty-state">No loans recorded.</div>`;
     } else {
         loans.forEach(loan => {
             const div = document.createElement('div');
             div.className = 'loan-item';
             const label = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
-            // Borrowed loans are negative for display, lent are positive
             const loanValue = loan.type === 'borrowed' ? -loan.amount : loan.amount;
             div.innerHTML = `
                 <span class="loan-name">${loan.name} <small>(${label})</small></span>
@@ -376,7 +382,7 @@ function renderBills() {
     const container = document.getElementById('bills-list');
     container.innerHTML = '';
     if (bills.length === 0) {
-        container.innerHTML = `<div class="empty-state"><span>🧾</span>No upcoming bills.</div>`;
+        container.innerHTML = `<div class="empty-state">No upcoming bills.</div>`;
     } else {
         const sortedBills = [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
         sortedBills.forEach(bill => {
@@ -385,7 +391,6 @@ function renderBills() {
             const dueDate = new Date(bill.dueDate + 'T00:00:00');
             const dueFormatted = dueDate.toLocaleDateString();
             const isPast = dueDate < new Date() && !bill.paid;
-            // Bills are expenses, display as negative
             div.innerHTML = `
                 <div style="flex:1;">
                     <div class="bill-name">${bill.name} ${isPast ? '⚠️' : ''}</div>
@@ -405,10 +410,8 @@ function renderBills() {
 function renderSummary() {
     const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
     const { income, expense } = getMonthlyIncomeExpense();
-    // Updated: use color-coded innerHTML
     document.getElementById('balance').innerHTML = formatCurrencyWithColor(totalBalance);
     document.getElementById('total-income').innerHTML = formatCurrencyWithColor(income);
-    // Expense is positive in getMonthlyIncomeExpense, so make negative for color
     document.getElementById('total-expense').innerHTML = formatCurrencyWithColor(-expense);
 
     const netWorth = getNetWorth();
@@ -435,7 +438,7 @@ function renderTransactionList() {
     });
 
     if (filtered.length === 0) {
-        list.innerHTML = `<li><div class="empty-state"><span>💸</span>No transactions found.</div></li>`;
+        list.innerHTML = `<li><div class="empty-state">No transactions found.</div></li>`;
         return;
     }
 
@@ -444,7 +447,6 @@ function renderTransactionList() {
         li.className = t.amount > 0 ? 'income' : 'expense';
         const account = accounts.find(acc => acc.id === t.accountId);
         const accountName = account ? account.name : 'Unknown';
-        // Updated: use color-coded amount
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
@@ -465,7 +467,7 @@ function renderTransactionPreview() {
     list.innerHTML = '';
     const recent = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     if (recent.length === 0) {
-        list.innerHTML = `<li><div class="empty-state"><span>📭</span>No transactions yet.</div></li>`;
+        list.innerHTML = `<li><div class="empty-state">No transactions yet.</div></li>`;
         return;
     }
     recent.forEach(t => {
@@ -492,7 +494,7 @@ function renderBudgets() {
     const monthBudgets = budgets[monthKey] || {};
     const categories = Object.keys(monthBudgets);
     if (categories.length === 0) {
-        container.innerHTML = `<div class="empty-state"><span>📊</span>No budgets set for this month.</div>`;
+        container.innerHTML = `<div class="empty-state">No budgets set for this month.</div>`;
         return;
     }
     categories.forEach(category => {
@@ -518,10 +520,13 @@ function renderBudgets() {
 
 // ---------- Charts ----------
 function renderCharts() {
+    // Destroy existing charts
     if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
     if (categoryPieChartInstance) categoryPieChartInstance.destroy();
     if (netWorthChartInstance) netWorthChartInstance.destroy();
+    if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy(); // NEW
 
+    // 1. Income vs Expense Bar Chart
     const months = [];
     const incomeData = [];
     const expenseData = [];
@@ -550,16 +555,16 @@ function renderCharts() {
                 {
                     label: 'Income',
                     data: incomeData,
-                    backgroundColor: 'rgba(22, 163, 74, 0.6)',
-                    borderColor: 'rgba(22, 163, 74, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
                     borderWidth: 1,
                     borderRadius: 6,
                 },
                 {
                     label: 'Expense',
                     data: expenseData,
-                    backgroundColor: 'rgba(220, 38, 38, 0.6)',
-                    borderColor: 'rgba(220, 38, 38, 1)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
                     borderWidth: 1,
                     borderRadius: 6,
                 }
@@ -573,13 +578,14 @@ function renderCharts() {
                 y: {
                     beginAtZero: true,
                     ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
-                    grid: { color: 'rgba(255,255,255,0.1)' }
+                    grid: { color: 'rgba(0,0,0,0.1)' }
                 },
                 x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
             }
         }
     });
 
+    // 2. Category Spending Doughnut
     const currentMonthKey = getMonthKey();
     const categorySpending = getCategorySpending(currentMonthKey);
     const categories = Object.keys(categorySpending);
@@ -592,14 +598,14 @@ function renderCharts() {
             datasets: [{
                 data: amounts,
                 backgroundColor: [
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(54, 162, 235, 0.7)',
-                    'rgba(255, 206, 86, 0.7)',
-                    'rgba(75, 192, 192, 0.7)',
-                    'rgba(153, 102, 255, 0.7)',
-                    'rgba(255, 159, 64, 0.7)',
-                    'rgba(255, 99, 132, 0.7)',
-                    'rgba(201, 203, 207, 0.7)'
+                    'rgba(239, 68, 68, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(16, 185, 129, 0.7)',
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(139, 92, 246, 0.7)',
+                    'rgba(236, 72, 153, 0.7)',
+                    'rgba(107, 114, 128, 0.7)',
+                    'rgba(245, 158, 11, 0.7)'
                 ],
                 borderWidth: 1
             }]
@@ -611,11 +617,40 @@ function renderCharts() {
         }
     });
 
+    // 3. NEW: Accounts Distribution Doughnut
+    const accountLabels = accounts.map(acc => acc.name);
+    const accountBalances = accounts.map(acc => Math.abs(acc.balance)); // Use absolute for chart, but color-coded separately if negative
+    const ctx3 = document.getElementById('accountsDoughnutChart').getContext('2d');
+    accountsDoughnutChartInstance = new Chart(ctx3, {
+        type: 'doughnut',
+        data: {
+            labels: accountLabels,
+            datasets: [{
+                data: accountBalances,
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.7)',   // blue
+                    'rgba(16, 185, 129, 0.7)',   // green
+                    'rgba(245, 158, 11, 0.7)',   // amber
+                    'rgba(139, 92, 246, 0.7)',   // purple
+                    'rgba(236, 72, 153, 0.7)',   // pink
+                    'rgba(107, 114, 128, 0.7)'   // gray
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } }
+        }
+    });
+
+    // 4. Net Worth Line Chart
     if (netWorthHistory.length > 0) {
         const dates = netWorthHistory.map(entry => entry.date);
         const values = netWorthHistory.map(entry => entry.value);
-        const ctx3 = document.getElementById('netWorthChart').getContext('2d');
-        netWorthChartInstance = new Chart(ctx3, {
+        const ctx4 = document.getElementById('netWorthChart').getContext('2d');
+        netWorthChartInstance = new Chart(ctx4, {
             type: 'line',
             data: {
                 labels: dates,
@@ -637,7 +672,7 @@ function renderCharts() {
                     y: {
                         beginAtZero: false,
                         ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
-                        grid: { color: 'rgba(255,255,255,0.1)' }
+                        grid: { color: 'rgba(0,0,0,0.1)' }
                     },
                     x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
                 }
@@ -648,6 +683,7 @@ function renderCharts() {
 
 function renderAll() {
     renderAccounts();
+    renderAccountBalances(); // NEW
     renderSavings();
     renderLoans();
     renderBills();
@@ -655,9 +691,8 @@ function renderAll() {
     renderTransactionList();
     renderTransactionPreview();
     renderBudgets();
-    recordNetWorthSnapshot(); // Automatically updates net worth history
+    recordNetWorthSnapshot();
 
-    // Re-render charts if they are visible
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }
@@ -681,14 +716,12 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
     applyTheme();
 });
 
-// Theme style buttons (NEW)
 document.querySelectorAll('.theme-option-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         setThemeStyle(btn.dataset.themeStyle);
     });
 });
 
-// Bottom navigation
 document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
         const tabId = item.dataset.tab;
@@ -696,7 +729,6 @@ document.querySelectorAll('.nav-item').forEach(item => {
     });
 });
 
-// FAB and modal triggers
 document.getElementById('fab-add-transaction').addEventListener('click', openTransactionModal);
 document.getElementById('open-modal-btn').addEventListener('click', openTransactionModal);
 document.getElementById('close-modal').addEventListener('click', closeTransactionModal);
@@ -704,7 +736,6 @@ document.getElementById('transaction-modal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('transaction-modal')) closeTransactionModal();
 });
 
-// Modal form submit
 document.getElementById('transaction-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const desc = document.getElementById('modal-description').value.trim();
@@ -720,7 +751,6 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     closeTransactionModal();
 });
 
-// More grid items
 document.querySelectorAll('.more-item').forEach(item => {
     item.addEventListener('click', () => {
         const target = item.dataset.tabTarget;
@@ -728,18 +758,15 @@ document.querySelectorAll('.more-item').forEach(item => {
     });
 });
 
-// View all transactions
 document.getElementById('view-all-transactions').addEventListener('click', () => {
     switchTab('transactions');
 });
 
-// Search transactions
 document.getElementById('search-transactions').addEventListener('input', (e) => {
     searchQuery = e.target.value;
     renderTransactionList();
 });
 
-// Account operations
 document.getElementById('add-account-btn').addEventListener('click', () => {
     const nameInput = document.getElementById('new-account-name');
     const name = nameInput.value.trim();
@@ -749,7 +776,6 @@ document.getElementById('add-account-btn').addEventListener('click', () => {
     }
 });
 
-// Savings operations
 document.getElementById('add-savings-btn').addEventListener('click', () => {
     const name = document.getElementById('savings-name').value.trim();
     const target = parseFloat(document.getElementById('savings-target').value);
@@ -765,7 +791,6 @@ document.getElementById('add-savings-btn').addEventListener('click', () => {
     }
 });
 
-// Loan operations
 document.getElementById('add-loan-btn').addEventListener('click', () => {
     const name = document.getElementById('loan-name').value.trim();
     const amount = parseFloat(document.getElementById('loan-amount').value);
@@ -779,7 +804,6 @@ document.getElementById('add-loan-btn').addEventListener('click', () => {
     }
 });
 
-// Bill operations
 document.getElementById('add-bill-btn').addEventListener('click', () => {
     const name = document.getElementById('bill-name').value.trim();
     const amount = parseFloat(document.getElementById('bill-amount').value);
@@ -794,7 +818,6 @@ document.getElementById('add-bill-btn').addEventListener('click', () => {
     }
 });
 
-// Budget operations
 document.getElementById('set-budget-btn').addEventListener('click', () => {
     const category = document.getElementById('budget-category').value;
     const limit = parseFloat(document.getElementById('budget-amount').value);
@@ -806,7 +829,6 @@ document.getElementById('set-budget-btn').addEventListener('click', () => {
     document.getElementById('budget-amount').value = '';
 });
 
-// Filters
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -818,7 +840,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 // ---------- Initialize ----------
 function initialize() {
-    // Migrate old savings (without accountId) to first account
     if (accounts.length > 0) {
         savings.forEach(s => {
             if (!s.accountId) {
@@ -829,7 +850,6 @@ function initialize() {
     }
     applyTheme();
     renderAll();
-    // If charts tab is active initially (unlikely), render charts
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }

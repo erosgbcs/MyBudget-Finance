@@ -2,38 +2,57 @@
 
 /* ================= BASE (LIGHT & GLASS DEFAULTS) ================= */
 :root {
-    --bg-gradient: linear-gradient(135deg, #e0e7ff, #f0f4ff, #fce7f3);
-    --card-bg: rgba(255, 255, 255, 0.25);
-    --card-border: 1px solid rgba(255, 255, 255, 0.3);
-    --text-primary: #1e293b;
+    --bg-gradient: linear-gradient(135deg, #f1f5f9, #e2e8f0, #f8fafc);
+    --card-bg: rgba(255, 255, 255, 0.65);
+    --card-border: 1px solid rgba(255, 255, 255, 0.8);
+    --text-primary: #0f172a;
     --text-secondary: #475569;
-    --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    --accent: #1976d2;
-    --accent-hover: #1565c0;
-    --income-color: #16a34a;
-    --expense-color: #dc2626;
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --income-color: #10b981;
+    --expense-color: #ef4444;
     --warning-color: #f59e0b;
-    --input-bg: rgba(255, 255, 255, 0.5);
-    --input-border: 1px solid rgba(255, 255, 255, 0.4);
+    --input-bg: rgba(255, 255, 255, 0.9);
+    --input-border: 1px solid #cbd5e1;
     --backdrop-filter: blur(16px);
     --border-radius: 20px;
     --nav-height: 70px;
     --fab-size: 56px;
 }
 
-/* ================= DARK MODE OVERRIDES (DEFAULT GLASS) ================= */
+/* ================= DARK MODE OVERRIDES ================= */
 body.dark-theme {
     --bg-gradient: linear-gradient(135deg, #0f172a, #1e293b, #2d1b4e);
-    --card-bg: rgba(30, 41, 59, 0.5);
+    --card-bg: rgba(30, 41, 59, 0.65);
     --card-border: 1px solid rgba(255, 255, 255, 0.1);
     --text-primary: #f1f5f9;
     --text-secondary: #cbd5e1;
     --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     --accent: #60a5fa;
     --accent-hover: #3b82f6;
-    --income-color: #4ade80;
+    --income-color: #34d399;
     --expense-color: #f87171;
     --warning-color: #fbbf24;
+    --input-bg: rgba(30, 41, 59, 0.9);
+    --input-border: 1px solid #475569;
+}
+
+/* ================= THEME: GLASSMORPHISM ================= */
+body[data-theme="glass"] {
+    --card-bg: rgba(255, 255, 255, 0.25);
+    --card-border: 1px solid rgba(255, 255, 255, 0.3);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --input-bg: rgba(255, 255, 255, 0.5);
+    --input-border: 1px solid rgba(255, 255, 255, 0.4);
+    --backdrop-filter: blur(16px);
+    --border-radius: 20px;
+}
+
+body[data-theme="glass"].dark-theme {
+    --card-bg: rgba(30, 41, 59, 0.5);
+    --card-border: 1px solid rgba(255, 255, 255, 0.1);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     --input-bg: rgba(30, 41, 59, 0.6);
     --input-border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -145,7 +164,6 @@ h1 {
     transform: scale(1.1);
 }
 
-/* Glassmorphism helper */
 .glass {
     background: var(--card-bg);
     backdrop-filter: var(--backdrop-filter);
@@ -206,15 +224,15 @@ h1 {
 }
 
 .card.balance {
-    background: rgba(25, 118, 210, 0.2);
+    background: rgba(59, 130, 246, 0.15);
 }
 
 .card.income {
-    background: rgba(22, 163, 74, 0.2);
+    background: rgba(16, 185, 129, 0.15);
 }
 
 .card.expense {
-    background: rgba(220, 38, 38, 0.2);
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .card p {
@@ -238,7 +256,7 @@ h1 {
 
 /* Net Worth Card */
 .net-worth-card {
-    background: rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.15);
     margin-bottom: 20px;
     text-align: center;
     padding: 20px;
@@ -253,6 +271,35 @@ h1 {
 .net-worth-card small {
     color: var(--text-secondary);
     font-size: 0.7rem;
+}
+
+/* Account Balances Summary */
+.account-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.account-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.account-summary-item:last-child {
+    border-bottom: none;
+}
+
+.account-summary-name {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.account-summary-balance {
+    font-weight: 700;
+    font-size: 1.1rem;
 }
 
 /* Inputs */
@@ -273,7 +320,7 @@ input, select {
 input:focus, select:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
 .row {
@@ -306,7 +353,7 @@ input:focus, select:focus {
 
 .btn:hover {
     background: var(--accent-hover);
-    box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn:active {
@@ -354,15 +401,12 @@ input:focus, select:focus {
     border-radius: 16px;
     transition: all 0.2s;
     gap: 4px;
-}
-
-.nav-item span {
     font-weight: 500;
 }
 
 .nav-item.active {
     color: var(--accent);
-    background: rgba(25, 118, 210, 0.1);
+    background: rgba(59, 130, 246, 0.1);
 }
 
 .nav-item:hover {
@@ -381,7 +425,7 @@ input:focus, select:focus {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(25, 118, 210, 0.4);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
     transition: transform 0.2s, background 0.2s;
     margin: 0 8px;
 }
@@ -408,7 +452,7 @@ input:focus, select:focus {
     border: var(--card-border);
     border-radius: 16px;
     padding: 20px 10px;
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
     display: flex;
     flex-direction: column;
@@ -419,10 +463,6 @@ input:focus, select:focus {
     transition: transform 0.2s, background 0.2s;
     backdrop-filter: var(--backdrop-filter);
     -webkit-backdrop-filter: var(--backdrop-filter);
-}
-
-.more-item span {
-    font-size: 0.85rem;
 }
 
 .more-item:hover {
@@ -549,7 +589,7 @@ input:focus, select:focus {
 }
 
 .delete-btn:hover {
-    background: rgba(220, 38, 38, 0.1);
+    background: rgba(239, 68, 68, 0.1);
     color: var(--expense-color);
 }
 
@@ -696,17 +736,11 @@ input:focus, select:focus {
     font-size: 0.9rem;
 }
 
-.empty-state span {
-    font-size: 2rem;
-    display: block;
-    margin-bottom: 10px;
-}
-
-/* ---------- Color-coded numbers ---------- */
+/* Color-coded numbers */
 .positive { color: var(--income-color); }
 .negative { color: var(--expense-color); }
 
-/* ---------- Theme option buttons ---------- */
+/* Theme options */
 .theme-options {
     display: flex;
     flex-wrap: wrap;
