@@ -9,6 +9,7 @@
     --accent-hover: #1565c0;
     --income-color: #16a34a;
     --expense-color: #dc2626;
+    --warning-color: #f59e0b;
     --glass-blur: blur(12px);
     --border-radius: 16px;
     --input-bg: rgba(255, 255, 255, 0.5);
@@ -26,6 +27,7 @@
     --accent-hover: #3b82f6;
     --income-color: #4ade80;
     --expense-color: #f87171;
+    --warning-color: #fbbf24;
     --input-bg: rgba(30, 41, 59, 0.6);
     --input-border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -57,6 +59,7 @@ body {
     padding: 20px;
     box-shadow: var(--shadow);
     color: var(--text-primary);
+    position: relative;
 }
 
 header {
@@ -67,11 +70,13 @@ header {
 }
 
 h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     color: var(--text-primary);
+    flex: 1;
+    text-align: center;
 }
 
-.theme-toggle {
+.menu-toggle, .theme-toggle {
     background: var(--card-bg);
     border: var(--card-border);
     border-radius: 50%;
@@ -86,11 +91,56 @@ h1 {
     transition: transform 0.2s;
 }
 
-.theme-toggle:hover {
+.menu-toggle:hover, .theme-toggle:hover {
     transform: scale(1.1);
 }
 
-/* Glassmorphism helper class */
+/* Dropdown Menu */
+.main-menu {
+    display: none;
+    position: absolute;
+    top: 70px;
+    left: 20px;
+    right: 20px;
+    z-index: 100;
+    padding: 10px;
+    flex-direction: column;
+    gap: 5px;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--card-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.main-menu.open {
+    display: flex;
+}
+
+.menu-item {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+    width: 100%;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-item.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* Glassmorphism helper */
 .glass {
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
@@ -111,6 +161,16 @@ h1 {
     color: var(--text-primary);
 }
 
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Summary Cards */
 .summary {
     display: flex;
     justify-content: space-between;
@@ -142,6 +202,24 @@ h1 {
     color: var(--text-secondary);
 }
 
+/* Net Worth Card */
+.net-worth-card {
+    background: rgba(139, 92, 246, 0.2);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.net-worth-card h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.net-worth-card small {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+/* Inputs */
 .row {
     display: flex;
     gap: 10px;
@@ -187,7 +265,8 @@ input, select {
     transform: scale(0.98);
 }
 
-.account-item, .savings-item, .loan-item {
+/* Account, Savings, Loan, Bill Items */
+.account-item, .savings-item, .loan-item, .bill-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -198,14 +277,19 @@ input, select {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.account-name, .savings-name, .loan-name {
+.account-name, .savings-name, .loan-name, .bill-name {
     font-weight: bold;
     color: var(--text-primary);
 }
 
-.account-balance, .savings-progress, .loan-amount {
+.account-balance, .savings-progress, .loan-amount, .bill-amount {
     color: var(--accent);
     font-weight: bold;
+}
+
+.bill-due {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .delete-btn {
@@ -217,6 +301,7 @@ input, select {
     padding: 0 5px;
 }
 
+/* Filters */
 .filters {
     display: flex;
     gap: 10px;
@@ -242,6 +327,7 @@ input, select {
     border: none;
 }
 
+/* Transaction List */
 .transaction-list {
     list-style: none;
 }
@@ -292,6 +378,7 @@ input, select {
     color: var(--expense-color);
 }
 
+/* Budget Progress */
 .budget-item {
     margin-bottom: 15px;
 }
@@ -316,7 +403,11 @@ input, select {
     height: 100%;
     background: var(--accent);
     border-radius: 4px;
-    transition: width 0.3s;
+    transition: width 0.3s, background 0.3s;
+}
+
+.progress-fill.warning {
+    background: var(--warning-color);
 }
 
 .progress-fill.over {
@@ -331,4 +422,12 @@ input, select {
 
 .savings-item .progress-bar {
     width: 100px;
+}
+
+/* Chart containers */
+.chart-container {
+    margin-bottom: 20px;
+    position: relative;
+    height: 250px;
+    width: 100%;
 }
