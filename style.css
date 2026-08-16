@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* ================= BASE (LIGHT & GLASS DEFAULTS) ================= */
 :root {
     --bg-gradient: linear-gradient(135deg, #e0e7ff, #f0f4ff, #fce7f3);
     --card-bg: rgba(255, 255, 255, 0.25);
@@ -12,15 +13,16 @@
     --income-color: #16a34a;
     --expense-color: #dc2626;
     --warning-color: #f59e0b;
-    --glass-blur: blur(16px);
-    --border-radius: 20px;
     --input-bg: rgba(255, 255, 255, 0.5);
     --input-border: 1px solid rgba(255, 255, 255, 0.4);
+    --backdrop-filter: blur(16px);
+    --border-radius: 20px;
     --nav-height: 70px;
     --fab-size: 56px;
 }
 
-.dark-theme {
+/* ================= DARK MODE OVERRIDES (DEFAULT GLASS) ================= */
+body.dark-theme {
     --bg-gradient: linear-gradient(135deg, #0f172a, #1e293b, #2d1b4e);
     --card-bg: rgba(30, 41, 59, 0.5);
     --card-border: 1px solid rgba(255, 255, 255, 0.1);
@@ -36,12 +38,49 @@
     --input-border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+/* ================= THEME: NEUMORPHISM ================= */
+body[data-theme="neumorphism"] {
+    --card-bg: #e0e5ec;
+    --card-border: none;
+    --shadow: 8px 8px 16px rgba(0,0,0,0.1), -8px -8px 16px rgba(255,255,255,0.7);
+    --input-bg: #e0e5ec;
+    --input-border: none;
+    --backdrop-filter: none;
+    --border-radius: 18px;
+}
+
+body[data-theme="neumorphism"].dark-theme {
+    --card-bg: #2a2f3a;
+    --shadow: 8px 8px 16px rgba(0,0,0,0.4), -8px -8px 16px rgba(255,255,255,0.05);
+    --input-bg: #2a2f3a;
+}
+
+/* ================= THEME: NORMAL (FLAT) ================= */
+body[data-theme="normal"] {
+    --card-bg: #ffffff;
+    --card-border: 1px solid #e2e8f0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --input-bg: #ffffff;
+    --input-border: 1px solid #cbd5e1;
+    --backdrop-filter: none;
+    --border-radius: 12px;
+}
+
+body[data-theme="normal"].dark-theme {
+    --card-bg: #1e293b;
+    --card-border: 1px solid #334155;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --input-bg: #1e293b;
+    --input-border: 1px solid #475569;
+}
+
+/* ================= GLOBAL STYLES ================= */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
 }
 
 body {
@@ -58,8 +97,8 @@ body {
     width: 100%;
     max-width: 500px;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     border: var(--card-border);
     border-radius: 28px;
     padding: 20px 20px calc(var(--nav-height) + 30px);
@@ -98,7 +137,8 @@ h1 {
     justify-content: center;
     box-shadow: var(--shadow);
     transition: transform 0.2s, background 0.3s;
-    backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
 }
 
 .theme-toggle:hover {
@@ -108,8 +148,8 @@ h1 {
 /* Glassmorphism helper */
 .glass {
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     border: var(--card-border);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
@@ -224,8 +264,8 @@ input, select {
     width: 100%;
     background: var(--input-bg);
     color: var(--text-primary);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     margin-bottom: 10px;
     transition: border 0.2s, box-shadow 0.2s;
 }
@@ -289,8 +329,8 @@ input:focus, select:focus {
     width: calc(100% - 40px);
     max-width: 460px;
     background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     border: var(--card-border);
     border-radius: 30px;
     box-shadow: var(--shadow);
@@ -377,8 +417,8 @@ input:focus, select:focus {
     color: var(--text-primary);
     font-weight: 500;
     transition: transform 0.2s, background 0.2s;
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
 }
 
 .more-item span {
@@ -577,8 +617,8 @@ input:focus, select:focus {
     border-radius: 10px;
     cursor: pointer;
     font-weight: 500;
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--backdrop-filter);
+    -webkit-backdrop-filter: var(--backdrop-filter);
     transition: background 0.2s, color 0.2s;
 }
 
@@ -660,6 +700,39 @@ input:focus, select:focus {
     font-size: 2rem;
     display: block;
     margin-bottom: 10px;
+}
+
+/* ---------- Color-coded numbers ---------- */
+.positive { color: var(--income-color); }
+.negative { color: var(--expense-color); }
+
+/* ---------- Theme option buttons ---------- */
+.theme-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+.theme-option-btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 1px solid var(--card-border, #ccc);
+    background: var(--card-bg, #fff);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 500;
+    box-shadow: var(--shadow, none);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.theme-option-btn:hover {
+    transform: translateY(-2px);
+}
+.theme-option-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
 }
 
 /* Animations */

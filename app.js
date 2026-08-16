@@ -13,6 +13,7 @@ let netWorthHistory = JSON.parse(localStorage.getItem('mb_networth_history')) ||
 let currentFilter = 'all';
 let searchQuery = '';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
+let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass'; // NEW: theme style
 
 // Chart.js instances
 let incomeExpenseChartInstance = null;
@@ -28,11 +29,28 @@ function saveLoans() { localStorage.setItem('mb_loans', JSON.stringify(loans)); 
 function saveBills() { localStorage.setItem('mb_bills', JSON.stringify(bills)); }
 function saveNetWorthHistory() { localStorage.setItem('mb_networth_history', JSON.stringify(netWorthHistory)); }
 function saveTheme() { localStorage.setItem('mb_theme', isDarkMode ? 'dark' : 'light'); }
+function saveThemeStyle() { localStorage.setItem('mb_theme_style', currentThemeStyle); }
 
 // ---------- Utilities ----------
 function formatCurrency(val) {
-    return '₱' + val.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return '₱' + Math.abs(val).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
+
+// NEW: Return CSS class for positive/negative/zero
+function getAmountClass(value) {
+    if (value > 0) return 'positive';
+    if (value < 0) return 'negative';
+    return '';
+}
+
+// NEW: Format currency with color-coded sign and class
+function formatCurrencyWithColor(val) {
+    const cls = getAmountClass(val);
+    const formatted = formatCurrency(val);
+    const sign = val > 0 ? '+' : (val < 0 ? '-' : '');
+    return `<span class="${cls}">${sign}${formatted}</span>`;
+}
+
 function getMonthKey() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -43,6 +61,7 @@ function getMonthKeyFromDate(date) {
 
 // ---------- Theme ----------
 function applyTheme() {
+    // Dark mode class
     if (isDarkMode) {
         document.body.classList.add('dark-theme');
         document.getElementById('theme-toggle').textContent = '☀️';
@@ -50,6 +69,22 @@ function applyTheme() {
         document.body.classList.remove('dark-theme');
         document.getElementById('theme-toggle').textContent = '🌙';
     }
+
+    // Theme style attribute
+    document.body.setAttribute('data-theme', currentThemeStyle);
+
+    // Update active button in theme options
+    document.querySelectorAll('.theme-option-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.themeStyle === currentThemeStyle);
+    });
+}
+
+// NEW: Change UI theme style
+function setThemeStyle(style) {
+    if (!['glass', 'neumorphism', 'normal'].includes(style)) return;
+    currentThemeStyle = style;
+    saveThemeStyle();
+    applyTheme();
 }
 
 // ---------- Tab Switching ----------
@@ -241,9 +276,10 @@ function renderAccounts() {
         accounts.forEach(acc => {
             const div = document.createElement('div');
             div.className = 'account-item';
+            // Updated: color-coded balance
             div.innerHTML = `
                 <span class="account-name">${acc.name}</span>
-                <span class="account-balance">${formatCurrency(acc.balance)}</span>
+                <span class="account-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
                 <button class="delete-btn" data-account-id="${acc.id}" aria-label="Delete account">✕</button>
             `;
             div.querySelector('.delete-btn').addEventListener('click', () => deleteAccount(acc.id));
@@ -286,10 +322,13 @@ function renderSavings() {
             const accountName = account ? account.name : 'No account';
             const div = document.createElement('div');
             div.className = 'savings-item';
+            // Optional: color-code current amount (positive)
             div.innerHTML = `
                 <div style="flex:1;">
                     <div class="savings-name">${goal.name} <small>(${accountName})</small></div>
-                    <div class="savings-progress">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</div>
+                    <div class="savings-progress">
+                        <span class="positive">${formatCurrency(goal.current)}</span> / ${formatCurrency(goal.target)}
+                    </div>
                     <div class="progress-bar">
                         <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
                     </div>
@@ -320,9 +359,11 @@ function renderLoans() {
             const div = document.createElement('div');
             div.className = 'loan-item';
             const label = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
+            // Borrowed loans are negative for display, lent are positive
+            const loanValue = loan.type === 'borrowed' ? -loan.amount : loan.amount;
             div.innerHTML = `
                 <span class="loan-name">${loan.name} <small>(${label})</small></span>
-                <span class="loan-amount">${formatCurrency(loan.amount)}</span>
+                <span class="loan-amount ${getAmountClass(loanValue)}">${formatCurrency(loan.amount)}</span>
                 <button class="delete-btn" data-loan-id="${loan.id}" aria-label="Delete loan">✕</button>
             `;
             div.querySelector('.delete-btn').addEventListener('click', () => deleteLoan(loan.id));
@@ -344,12 +385,13 @@ function renderBills() {
             const dueDate = new Date(bill.dueDate + 'T00:00:00');
             const dueFormatted = dueDate.toLocaleDateString();
             const isPast = dueDate < new Date() && !bill.paid;
+            // Bills are expenses, display as negative
             div.innerHTML = `
                 <div style="flex:1;">
                     <div class="bill-name">${bill.name} ${isPast ? '⚠️' : ''}</div>
                     <div class="bill-due">Due: ${dueFormatted}</div>
                 </div>
-                <span class="bill-amount">${formatCurrency(bill.amount)}</span>
+                <span class="bill-amount negative">-${formatCurrency(bill.amount)}</span>
                 <button class="paid-btn" data-bill-id="${bill.id}" aria-label="Toggle paid">${bill.paid ? '↩️' : '✅'}</button>
                 <button class="delete-btn" data-bill-id="${bill.id}" aria-label="Delete bill">✕</button>
             `;
@@ -363,12 +405,14 @@ function renderBills() {
 function renderSummary() {
     const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
     const { income, expense } = getMonthlyIncomeExpense();
-    document.getElementById('balance').textContent = formatCurrency(totalBalance);
-    document.getElementById('total-income').textContent = formatCurrency(income);
-    document.getElementById('total-expense').textContent = formatCurrency(expense);
+    // Updated: use color-coded innerHTML
+    document.getElementById('balance').innerHTML = formatCurrencyWithColor(totalBalance);
+    document.getElementById('total-income').innerHTML = formatCurrencyWithColor(income);
+    // Expense is positive in getMonthlyIncomeExpense, so make negative for color
+    document.getElementById('total-expense').innerHTML = formatCurrencyWithColor(-expense);
 
     const netWorth = getNetWorth();
-    document.getElementById('net-worth').textContent = formatCurrency(netWorth);
+    document.getElementById('net-worth').innerHTML = formatCurrencyWithColor(netWorth);
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
     const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
@@ -400,13 +444,14 @@ function renderTransactionList() {
         li.className = t.amount > 0 ? 'income' : 'expense';
         const account = accounts.find(acc => acc.id === t.accountId);
         const accountName = account ? account.name : 'Unknown';
+        // Updated: use color-coded amount
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
                 <div class="transaction-meta">${t.category} • ${accountName} • ${new Date(t.date).toLocaleDateString()}</div>
             </div>
-            <span class="transaction-amount ${t.amount > 0 ? 'income' : 'expense'}">
-                ${t.amount > 0 ? '+' : '-'}${formatCurrency(Math.abs(t.amount))}
+            <span class="transaction-amount ${getAmountClass(t.amount)}">
+                ${formatCurrencyWithColor(t.amount)}
             </span>
             <button class="delete-btn" data-id="${t.id}" aria-label="Delete transaction">✕</button>
         `;
@@ -431,8 +476,8 @@ function renderTransactionPreview() {
                 <div class="transaction-desc">${t.description}</div>
                 <div class="transaction-meta">${t.category} • ${new Date(t.date).toLocaleDateString()}</div>
             </div>
-            <span class="transaction-amount ${t.amount > 0 ? 'income' : 'expense'}">
-                ${t.amount > 0 ? '+' : '-'}${formatCurrency(Math.abs(t.amount))}
+            <span class="transaction-amount ${getAmountClass(t.amount)}">
+                ${formatCurrencyWithColor(t.amount)}
             </span>
         `;
         list.appendChild(li);
@@ -634,6 +679,13 @@ document.getElementById('theme-toggle').addEventListener('click', () => {
     isDarkMode = !isDarkMode;
     saveTheme();
     applyTheme();
+});
+
+// Theme style buttons (NEW)
+document.querySelectorAll('.theme-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setThemeStyle(btn.dataset.themeStyle);
+    });
 });
 
 // Bottom navigation
