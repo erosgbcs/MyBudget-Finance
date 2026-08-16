@@ -19,7 +19,7 @@ let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass';
 let incomeExpenseChartInstance = null;
 let categoryPieChartInstance = null;
 let netWorthChartInstance = null;
-let accountsDoughnutChartInstance = null; // NEW
+let accountsDoughnutChartInstance = null;
 
 // ---------- Save Functions ----------
 function saveAccounts() { localStorage.setItem('mb_accounts', JSON.stringify(accounts)); }
@@ -54,6 +54,7 @@ function getMonthKey() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
+
 function getMonthKeyFromDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
@@ -62,12 +63,25 @@ function getMonthKeyFromDate(date) {
 function applyTheme() {
     if (isDarkMode) {
         document.body.classList.add('dark-theme');
-        document.getElementById('theme-toggle').textContent = '☀️';
+        document.getElementById('theme-toggle').innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"/>
+                <line x1="12" y1="1" x2="12" y2="3"/>
+                <line x1="12" y1="21" x2="12" y2="23"/>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                <line x1="1" y1="12" x2="3" y2="12"/>
+                <line x1="21" y1="12" x2="23" y2="12"/>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>`;
     } else {
         document.body.classList.remove('dark-theme');
-        document.getElementById('theme-toggle').textContent = '🌙';
+        document.getElementById('theme-toggle').innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>`;
     }
-
     document.body.setAttribute('data-theme', currentThemeStyle);
     document.querySelectorAll('.theme-option-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.themeStyle === currentThemeStyle);
@@ -270,7 +284,14 @@ function renderAccounts() {
             div.innerHTML = `
                 <span class="account-name">${acc.name}</span>
                 <span class="account-balance ${getAmountClass(acc.balance)}">${formatCurrency(acc.balance)}</span>
-                <button class="delete-btn" data-account-id="${acc.id}" aria-label="Delete account">✕</button>
+                <button class="delete-btn" data-account-id="${acc.id}" aria-label="Delete account">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
             `;
             div.querySelector('.delete-btn').addEventListener('click', () => deleteAccount(acc.id));
             container.appendChild(div);
@@ -298,7 +319,6 @@ function renderAccounts() {
     }
 }
 
-// NEW: Render Account Balances on Home
 function renderAccountBalances() {
     const container = document.getElementById('account-balances-list');
     if (!container) return;
@@ -341,7 +361,14 @@ function renderSavings() {
                     </div>
                 </div>
                 <input type="number" class="savings-update" value="${goal.current}" step="0.01" style="width:80px;">
-                <button class="delete-btn" data-savings-id="${goal.id}" aria-label="Delete goal">✕</button>
+                <button class="delete-btn" data-savings-id="${goal.id}" aria-label="Delete goal">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
             `;
             const updateInput = div.querySelector('.savings-update');
             updateInput.addEventListener('change', () => {
@@ -370,7 +397,14 @@ function renderLoans() {
             div.innerHTML = `
                 <span class="loan-name">${loan.name} <small>(${label})</small></span>
                 <span class="loan-amount ${getAmountClass(loanValue)}">${formatCurrency(loan.amount)}</span>
-                <button class="delete-btn" data-loan-id="${loan.id}" aria-label="Delete loan">✕</button>
+                <button class="delete-btn" data-loan-id="${loan.id}" aria-label="Delete loan">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
             `;
             div.querySelector('.delete-btn').addEventListener('click', () => deleteLoan(loan.id));
             container.appendChild(div);
@@ -393,12 +427,24 @@ function renderBills() {
             const isPast = dueDate < new Date() && !bill.paid;
             div.innerHTML = `
                 <div style="flex:1;">
-                    <div class="bill-name">${bill.name} ${isPast ? '⚠️' : ''}</div>
+                    <div class="bill-name">${bill.name} ${isPast ? '<span class="dot over"></span>' : ''}</div>
                     <div class="bill-due">Due: ${dueFormatted}</div>
                 </div>
                 <span class="bill-amount negative">-${formatCurrency(bill.amount)}</span>
-                <button class="paid-btn" data-bill-id="${bill.id}" aria-label="Toggle paid">${bill.paid ? '↩️' : '✅'}</button>
-                <button class="delete-btn" data-bill-id="${bill.id}" aria-label="Delete bill">✕</button>
+                <button class="paid-btn" data-bill-id="${bill.id}" aria-label="Toggle paid">
+                    ${bill.paid ? 
+                        '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>' :
+                        '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
+                    }
+                </button>
+                <button class="delete-btn" data-bill-id="${bill.id}" aria-label="Delete bill">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                    </svg>
+                </button>
             `;
             div.querySelector('.delete-btn').addEventListener('click', () => deleteBill(bill.id));
             div.querySelector('.paid-btn').addEventListener('click', () => toggleBillPaid(bill.id));
@@ -455,7 +501,14 @@ function renderTransactionList() {
             <span class="transaction-amount ${getAmountClass(t.amount)}">
                 ${formatCurrencyWithColor(t.amount)}
             </span>
-            <button class="delete-btn" data-id="${t.id}" aria-label="Delete transaction">✕</button>
+            <button class="delete-btn" data-id="${t.id}" aria-label="Delete transaction">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            </button>
         `;
         li.querySelector('.delete-btn').addEventListener('click', () => deleteTransaction(t.id));
         list.appendChild(li);
@@ -507,7 +560,7 @@ function renderBudgets() {
         div.className = 'budget-item';
         div.innerHTML = `
             <div class="budget-header">
-                <span>${category} ${over ? '🔴' : warning ? '🟠' : ''}</span>
+                <span>${category} ${over ? '<span class="dot over"></span>' : warning ? '<span class="dot warning"></span>' : ''}</span>
                 <span>${formatCurrency(spent)} / ${formatCurrency(limit)} (${Math.round(percent)}%)</span>
             </div>
             <div class="progress-bar">
@@ -520,11 +573,10 @@ function renderBudgets() {
 
 // ---------- Charts ----------
 function renderCharts() {
-    // Destroy existing charts
     if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
     if (categoryPieChartInstance) categoryPieChartInstance.destroy();
     if (netWorthChartInstance) netWorthChartInstance.destroy();
-    if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy(); // NEW
+    if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy();
 
     // 1. Income vs Expense Bar Chart
     const months = [];
@@ -617,9 +669,9 @@ function renderCharts() {
         }
     });
 
-    // 3. NEW: Accounts Distribution Doughnut
+    // 3. Accounts Distribution Doughnut
     const accountLabels = accounts.map(acc => acc.name);
-    const accountBalances = accounts.map(acc => Math.abs(acc.balance)); // Use absolute for chart, but color-coded separately if negative
+    const accountBalances = accounts.map(acc => Math.abs(acc.balance));
     const ctx3 = document.getElementById('accountsDoughnutChart').getContext('2d');
     accountsDoughnutChartInstance = new Chart(ctx3, {
         type: 'doughnut',
@@ -628,12 +680,12 @@ function renderCharts() {
             datasets: [{
                 data: accountBalances,
                 backgroundColor: [
-                    'rgba(59, 130, 246, 0.7)',   // blue
-                    'rgba(16, 185, 129, 0.7)',   // green
-                    'rgba(245, 158, 11, 0.7)',   // amber
-                    'rgba(139, 92, 246, 0.7)',   // purple
-                    'rgba(236, 72, 153, 0.7)',   // pink
-                    'rgba(107, 114, 128, 0.7)'   // gray
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(16, 185, 129, 0.7)',
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(139, 92, 246, 0.7)',
+                    'rgba(236, 72, 153, 0.7)',
+                    'rgba(107, 114, 128, 0.7)'
                 ],
                 borderWidth: 1
             }]
@@ -683,7 +735,7 @@ function renderCharts() {
 
 function renderAll() {
     renderAccounts();
-    renderAccountBalances(); // NEW
+    renderAccountBalances();
     renderSavings();
     renderLoans();
     renderBills();
