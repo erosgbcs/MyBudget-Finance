@@ -80,23 +80,37 @@
         </div>
 
         <!-- CHARTS TAB -->
-        <div class="tab-content" id="tab-charts">
-            <div class="section glass">
-                <h2>Financial Summary</h2>
-                <div class="chart-container">
-                    <canvas id="incomeExpenseChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="categoryPieChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="accountsDoughnutChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="netWorthChart"></canvas>
-                </div>
-            </div>
+<div class="tab-content" id="tab-charts">
+    <!-- Bar Chart Card -->
+    <div class="section glass">
+        <div class="section-header">
+            <h2>Income vs Expense</h2>
         </div>
+        <div class="chart-container">
+            <canvas id="incomeExpenseChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Doughnut Chart Card -->
+    <div class="section glass">
+        <div class="section-header">
+            <h2>Category Spending</h2>
+        </div>
+        <div class="chart-container">
+            <canvas id="categoryPieChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Line Chart Card -->
+    <div class="section glass">
+        <div class="section-header">
+            <h2>Net Worth History</h2>
+        </div>
+        <div class="chart-container">
+            <canvas id="netWorthChart"></canvas>
+        </div>
+    </div>
+</div>
 
         <!-- MORE TAB -->
         <div class="tab-content" id="tab-more">
