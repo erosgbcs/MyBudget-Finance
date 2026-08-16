@@ -418,15 +418,31 @@ function getNetWorth() {
 }
 
 function recordNetWorthSnapshot() {
-    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const timestamp = now.toISOString();  // full date & time
+    const currentNetWorth = getNetWorth();
+
+    // Optional throttle: only add a new point if at least 60 seconds since last
     const lastEntry = netWorthHistory[netWorthHistory.length - 1];
-    if (!lastEntry || lastEntry.date !== today) {
-        netWorthHistory.push({ date: today, value: getNetWorth() });
-        saveNetWorthHistory();
-    } else {
-        lastEntry.value = getNetWorth();
-        saveNetWorthHistory();
+    if (lastEntry) {
+        const lastTime = new Date(lastEntry.date).getTime();
+        if (now.getTime() - lastTime < 60 * 1000) {
+            // Update last entry's value instead of adding new point
+            lastEntry.value = currentNetWorth;
+            saveNetWorthHistory();
+            return;
+        }
     }
+
+    // Add new snapshot
+    netWorthHistory.push({ date: timestamp, value: currentNetWorth });
+
+    // Keep only latest 100 points to save storage
+    if (netWorthHistory.length > 100) {
+        netWorthHistory = netWorthHistory.slice(-100);
+    }
+
+    saveNetWorthHistory();
 }
 
 // ---------- Render Functions ----------
@@ -893,38 +909,57 @@ function renderCharts() {
 
     // 4. Net Worth Line Chart
     if (netWorthHistory.length > 0) {
-        const dates = netWorthHistory.map(entry => entry.date);
-        const values = netWorthHistory.map(entry => entry.value);
-        const ctx4 = document.getElementById('netWorthChart').getContext('2d');
-        netWorthChartInstance = new Chart(ctx4, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [{
-                    label: 'Net Worth',
-                    data: values,
-                    borderColor: 'rgba(139, 92, 246, 1)',
-                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
-                        grid: { color: 'rgba(0,0,0,0.1)' }
+    const labels = netWorthHistory.map(entry => {
+        const d = new Date(entry.date);
+        return d.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    });
+    const values = netWorthHistory.map(entry => entry.value);
+
+    const ctx4 = document.getElementById('netWorthChart').getContext('2d');
+    netWorthChartInstance = new Chart(ctx4, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Net Worth',
+                data: values,
+                borderColor: 'rgba(139, 92, 246, 1)',
+                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: { 
+                        callback: value => '₱' + value, 
+                        color: getComputedStyle(document.body).getPropertyValue('--text-secondary') 
                     },
-                    x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
+                    grid: { color: 'rgba(0,0,0,0.1)' }
+                },
+                x: {
+                    ticks: { 
+                        color: getComputedStyle(document.body).getPropertyValue('--text-secondary'),
+                        maxRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 10
+                    },
+                    grid: { display: false }
                 }
             }
-        });
-    }
+        }
+    });
 }
 
 // NEW: Render Budget vs Actual Bar Chart
