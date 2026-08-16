@@ -14,15 +14,19 @@ let currentFilter = 'all';
 let searchQuery = '';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
 let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass';
-// NEW: Transparency & Palette
 let transparency = parseFloat(localStorage.getItem('mb_transparency')) || 0.65;
 let currentPalette = localStorage.getItem('mb_palette') || 'default';
+// NEW: Font size & density
+let fontSize = localStorage.getItem('mb_font_size') || 'medium';
+let density = localStorage.getItem('mb_density') || 'comfortable';
+let notificationsEnabled = localStorage.getItem('mb_notifications') === 'true';
 
 // Chart.js instances
 let incomeExpenseChartInstance = null;
 let categoryPieChartInstance = null;
 let netWorthChartInstance = null;
 let accountsDoughnutChartInstance = null;
+let budgetChartInstance = null; // NEW
 
 // ---------- Save Functions ----------
 function saveAccounts() { localStorage.setItem('mb_accounts', JSON.stringify(accounts)); }
@@ -34,9 +38,11 @@ function saveBills() { localStorage.setItem('mb_bills', JSON.stringify(bills)); 
 function saveNetWorthHistory() { localStorage.setItem('mb_networth_history', JSON.stringify(netWorthHistory)); }
 function saveTheme() { localStorage.setItem('mb_theme', isDarkMode ? 'dark' : 'light'); }
 function saveThemeStyle() { localStorage.setItem('mb_theme_style', currentThemeStyle); }
-// NEW: Save transparency & palette
 function saveTransparency() { localStorage.setItem('mb_transparency', transparency); }
 function savePalette() { localStorage.setItem('mb_palette', currentPalette); }
+function saveFontSize() { localStorage.setItem('mb_font_size', fontSize); }
+function saveDensity() { localStorage.setItem('mb_density', density); }
+function saveNotifications() { localStorage.setItem('mb_notifications', notificationsEnabled); }
 
 // ---------- Utilities ----------
 function formatCurrency(val) {
@@ -65,11 +71,26 @@ function getMonthKeyFromDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// ---------- Helper: total savings for account ----------
 function getSavingsTotalForAccount(accountId) {
     return savings
         .filter(s => s.accountId === accountId)
         .reduce((sum, s) => sum + (s.current || 0), 0);
+}
+
+// ---------- Toast Notifications (NEW) ----------
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        const div = document.createElement('div');
+        div.id = 'toast-container';
+        div.className = 'toast-container';
+        document.body.appendChild(div);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
 }
 
 // ---------- Theme & Settings ----------
@@ -102,20 +123,36 @@ function applyTheme() {
         btn.classList.toggle('active', btn.dataset.themeStyle === currentThemeStyle);
     });
 
-    // NEW: Apply transparency variable
+    // Transparency
     document.documentElement.style.setProperty('--card-alpha', transparency);
 
-    // NEW: Apply palette
+    // Palette
     document.body.setAttribute('data-palette', currentPalette);
     document.querySelectorAll('.palette-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.palette === currentPalette);
     });
 
-    // Update transparency slider position
+    // Font size & density
+    document.body.setAttribute('data-font-size', fontSize);
+    document.body.setAttribute('data-density', density);
+
+    // Update UI controls
     const slider = document.getElementById('transparency-slider');
     if (slider) {
         slider.value = transparency;
         document.getElementById('transparency-value').textContent = transparency;
+    }
+    const fontSelect = document.getElementById('font-size-select');
+    if (fontSelect) fontSelect.value = fontSize;
+    const densitySelect = document.getElementById('density-select');
+    if (densitySelect) densitySelect.value = density;
+    const notifBtn = document.getElementById('enable-notifications-btn');
+    if (notifBtn) {
+        notifBtn.textContent = notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications';
+    }
+    const notifStatus = document.getElementById('notification-status');
+    if (notifStatus) {
+        notifStatus.textContent = notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled';
     }
 }
 
@@ -126,17 +163,29 @@ function setThemeStyle(style) {
     applyTheme();
 }
 
-// NEW: Set transparency
 function setTransparency(value) {
     transparency = Math.min(0.9, Math.max(0.1, value));
     saveTransparency();
     applyTheme();
 }
 
-// NEW: Set palette
 function setPalette(palette) {
     currentPalette = palette;
     savePalette();
+    applyTheme();
+}
+
+function setFontSize(size) {
+    if (!['small', 'medium', 'large'].includes(size)) return;
+    fontSize = size;
+    saveFontSize();
+    applyTheme();
+}
+
+function setDensity(densityVal) {
+    if (!['comfortable', 'compact'].includes(densityVal)) return;
+    density = densityVal;
+    saveDensity();
     applyTheme();
 }
 
@@ -152,6 +201,9 @@ function switchTab(tabId, activeNav = tabId) {
 
     if (tabId === 'charts') {
         setTimeout(() => renderCharts(), 100);
+    }
+    if (tabId === 'budget') {
+        setTimeout(() => renderBudgetChart(), 100);
     }
 }
 
@@ -176,7 +228,12 @@ function deleteAccount(id) {
 // ---------- Savings Operations ----------
 function addSavingsGoal(name, target, current, accountId) {
     const id = 'sav' + Date.now();
-    savings.push({ id, name, target, current, accountId });
+    // NEW: store createdAt and initialAmount for projection
+    savings.push({ 
+        id, name, target, current, accountId,
+        createdAt: new Date().toISOString(),
+        initialAmount: current || 0
+    });
     saveSavings();
     renderAll();
 }
@@ -234,22 +291,62 @@ function toggleBillPaid(id) {
 }
 
 // ---------- Transaction Operations ----------
-function addTransaction(description, amount, type, category, accountId) {
-    const signedAmount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
-    const transaction = {
-        id: Date.now(),
-        description,
-        amount: signedAmount,
-        category,
-        accountId,
-        date: new Date().toISOString()
-    };
-    transactions.push(transaction);
-    const account = accounts.find(acc => acc.id === accountId);
-    if (account) account.balance += signedAmount;
-    saveTransactions();
-    saveAccounts();
-    renderAll();
+function addTransaction(description, amount, type, category, accountId, transferToAccountId = null) {
+    if (type === 'transfer') {
+        // Create two transactions: expense from source, income to destination
+        const fromAccount = accounts.find(acc => acc.id === accountId);
+        const toAccount = accounts.find(acc => acc.id === transferToAccountId);
+        if (!fromAccount || !toAccount) {
+            alert('Please select valid accounts for transfer.');
+            return;
+        }
+        const transferAmount = Math.abs(amount);
+        // Deduct from source
+        const expenseTx = {
+            id: Date.now(),
+            description: `Transfer to ${toAccount.name}`,
+            amount: -transferAmount,
+            category: 'Transfer',
+            accountId: fromAccount.id,
+            date: new Date().toISOString()
+        };
+        // Add to destination
+        const incomeTx = {
+            id: Date.now() + 1,
+            description: `Transfer from ${fromAccount.name}`,
+            amount: transferAmount,
+            category: 'Transfer',
+            accountId: toAccount.id,
+            date: new Date().toISOString()
+        };
+        transactions.push(expenseTx, incomeTx);
+        fromAccount.balance -= transferAmount;
+        toAccount.balance += transferAmount;
+        saveTransactions();
+        saveAccounts();
+        renderAll();
+        showToast('Transfer completed', 'success');
+    } else {
+        const signedAmount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
+        const transaction = {
+            id: Date.now(),
+            description,
+            amount: signedAmount,
+            category,
+            accountId,
+            date: new Date().toISOString()
+        };
+        transactions.push(transaction);
+        const account = accounts.find(acc => acc.id === accountId);
+        if (account) account.balance += signedAmount;
+        saveTransactions();
+        saveAccounts();
+        renderAll();
+        // Budget notification check for expense
+        if (type === 'expense') {
+            checkBudgetAlerts(category);
+        }
+    }
 }
 
 function deleteTransaction(id) {
@@ -270,6 +367,7 @@ function setBudget(category, limit) {
     budgets[monthKey][category] = limit;
     saveBudgets();
     renderAll();
+    showToast('Budget set', 'success');
 }
 
 function getMonthlyIncomeExpense() {
@@ -293,6 +391,20 @@ function getCategorySpending(monthKey) {
         }
     });
     return spending;
+}
+
+// ---------- Budget Alerts (NEW) ----------
+function checkBudgetAlerts(category) {
+    const monthKey = getMonthKey();
+    const monthBudgets = budgets[monthKey] || {};
+    if (!monthBudgets[category]) return;
+    const limit = monthBudgets[category];
+    const spent = getCategorySpending(monthKey)[category] || 0;
+    if (spent >= limit) {
+        showToast(`Budget exceeded for ${category}! Spent ${formatCurrency(spent)} of ${formatCurrency(limit)}.`, 'warning');
+    } else if (spent >= 0.8 * limit) {
+        showToast(`Approaching budget limit for ${category}. ${formatCurrency(limit - spent)} remaining.`, 'warning');
+    }
 }
 
 // ---------- Net Worth ----------
@@ -368,6 +480,23 @@ function renderAccounts() {
             savingsAccountSelect.appendChild(option);
         });
     }
+    // Transfer selects
+    const transferFrom = document.getElementById('transfer-from-account');
+    const transferTo = document.getElementById('transfer-to-account');
+    if (transferFrom && transferTo) {
+        transferFrom.innerHTML = '';
+        transferTo.innerHTML = '';
+        accounts.forEach(acc => {
+            const opt1 = document.createElement('option');
+            opt1.value = acc.id;
+            opt1.textContent = acc.name;
+            transferFrom.appendChild(opt1);
+            const opt2 = document.createElement('option');
+            opt2.value = acc.id;
+            opt2.textContent = acc.name;
+            transferTo.appendChild(opt2);
+        });
+    }
 }
 
 function renderAccountBalances() {
@@ -400,6 +529,19 @@ function renderSavings() {
             const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
             const account = accounts.find(acc => acc.id === goal.accountId);
             const accountName = account ? account.name : 'No account';
+            // Projection calculation (NEW)
+            let projectionText = '';
+            if (goal.createdAt && goal.initialAmount !== undefined && goal.target > goal.current) {
+                const created = new Date(goal.createdAt);
+                const now = new Date();
+                const months = Math.max(1, (now - created) / (1000 * 60 * 60 * 24 * 30));
+                const monthlyRate = (goal.current - goal.initialAmount) / months;
+                if (monthlyRate > 0) {
+                    const remaining = goal.target - goal.current;
+                    const monthsNeeded = Math.ceil(remaining / monthlyRate);
+                    projectionText = `<div class="transaction-meta">Projection: ~${monthsNeeded} month(s) to goal</div>`;
+                }
+            }
             const div = document.createElement('div');
             div.className = 'savings-item';
             div.innerHTML = `
@@ -411,6 +553,7 @@ function renderSavings() {
                     <div class="progress-bar">
                         <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
                     </div>
+                    ${projectionText}
                 </div>
                 <input type="number" class="savings-update" value="${goal.current}" step="0.01" style="width:80px;">
                 <button class="delete-btn" data-savings-id="${goal.id}" aria-label="Delete goal">
@@ -784,6 +927,61 @@ function renderCharts() {
     }
 }
 
+// NEW: Render Budget vs Actual Bar Chart
+function renderBudgetChart() {
+    if (budgetChartInstance) budgetChartInstance.destroy();
+    const canvas = document.getElementById('budgetChart');
+    if (!canvas) return;
+    const monthKey = getMonthKey();
+    const monthBudgets = budgets[monthKey] || {};
+    const categories = Object.keys(monthBudgets);
+    if (categories.length === 0) {
+        return;
+    }
+    const spending = getCategorySpending(monthKey);
+    const budgetData = categories.map(cat => monthBudgets[cat]);
+    const actualData = categories.map(cat => spending[cat] || 0);
+
+    const ctx = canvas.getContext('2d');
+    budgetChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: categories,
+            datasets: [
+                {
+                    label: 'Budget',
+                    data: budgetData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                },
+                {
+                    label: 'Actual',
+                    data: actualData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+                    grid: { color: 'rgba(0,0,0,0.1)' }
+                },
+                x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
+            }
+        }
+    });
+}
+
 function renderAll() {
     renderAccounts();
     renderAccountBalances();
@@ -795,9 +993,47 @@ function renderAll() {
     renderTransactionPreview();
     renderBudgets();
     recordNetWorthSnapshot();
+    updateBillBadge(); // NEW
 
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
+    }
+    if (document.getElementById('tab-budget').classList.contains('active')) {
+        renderBudgetChart();
+    }
+}
+
+// ---------- Bill Reminders & Badge (NEW) ----------
+function getUpcomingBills(days = 3) {
+    const today = new Date();
+    const future = new Date(today);
+    future.setDate(today.getDate() + days);
+    return bills.filter(bill => {
+        if (bill.paid) return false;
+        const due = new Date(bill.dueDate + 'T00:00:00');
+        return due >= today && due <= future;
+    });
+}
+
+function updateBillBadge() {
+    const upcoming = getUpcomingBills();
+    const badge = document.getElementById('more-badge');
+    if (badge) {
+        if (upcoming.length > 0) {
+            badge.textContent = upcoming.length;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    // Show toast/notification if enabled and there are upcoming bills
+    if (notificationsEnabled && upcoming.length > 0) {
+        const message = `You have ${upcoming.length} bill(s) due within 3 days.`;
+        showToast(message, 'info');
+        // Also use Notification API if permission granted
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('MyBudget Bill Reminder', { body: message });
+        }
     }
 }
 
@@ -805,6 +1041,9 @@ function renderAll() {
 function openTransactionModal() {
     document.getElementById('transaction-modal').classList.add('open');
     document.getElementById('modal-description').focus();
+    // Reset type to expense
+    document.getElementById('modal-type').value = 'expense';
+    toggleTransferFields();
 }
 
 function closeTransactionModal() {
@@ -812,7 +1051,21 @@ function closeTransactionModal() {
     document.getElementById('transaction-form').reset();
 }
 
-// ---------- Settings UI Generation (NEW) ----------
+// NEW: Toggle transfer fields based on type
+function toggleTransferFields() {
+    const type = document.getElementById('modal-type').value;
+    const transferFields = document.getElementById('transfer-fields');
+    const regularAccount = document.getElementById('modal-account');
+    if (type === 'transfer') {
+        transferFields.style.display = 'block';
+        regularAccount.style.display = 'none';
+    } else {
+        transferFields.style.display = 'none';
+        regularAccount.style.display = 'block';
+    }
+}
+
+// ---------- Settings UI Generation ----------
 const PALETTES = [
     { id: 'default', name: 'Default', swatch: '#3b82f6' },
     { id: 'rose', name: 'Rose', swatch: '#ec4899' },
@@ -874,14 +1127,27 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     const amount = parseFloat(document.getElementById('modal-amount').value);
     const type = document.getElementById('modal-type').value;
     const category = document.getElementById('modal-category').value;
-    const accountId = document.getElementById('modal-account').value;
     if (!desc || isNaN(amount) || amount <= 0) {
         alert('Please enter a valid description and amount');
         return;
     }
-    addTransaction(desc, amount, type, category, accountId);
+    if (type === 'transfer') {
+        const fromAccountId = document.getElementById('transfer-from-account').value;
+        const toAccountId = document.getElementById('transfer-to-account').value;
+        if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) {
+            alert('Please select different accounts for transfer.');
+            return;
+        }
+        addTransaction(desc, amount, type, 'Transfer', fromAccountId, toAccountId);
+    } else {
+        const accountId = document.getElementById('modal-account').value;
+        addTransaction(desc, amount, type, category, accountId);
+    }
     closeTransactionModal();
 });
+
+// NEW: Toggle transfer fields on type change
+document.getElementById('modal-type').addEventListener('change', toggleTransferFields);
 
 document.querySelectorAll('.more-item').forEach(item => {
     item.addEventListener('click', () => {
@@ -977,26 +1243,64 @@ document.getElementById('transparency-slider').addEventListener('input', (e) => 
     setTransparency(val);
 });
 
+document.getElementById('font-size-select').addEventListener('change', (e) => {
+    setFontSize(e.target.value);
+});
+
+document.getElementById('density-select').addEventListener('change', (e) => {
+    setDensity(e.target.value);
+});
+
+document.getElementById('enable-notifications-btn').addEventListener('click', async () => {
+    if (!('Notification' in window)) {
+        alert('This browser does not support notifications.');
+        return;
+    }
+    if (Notification.permission === 'granted') {
+        notificationsEnabled = !notificationsEnabled; // toggle
+        saveNotifications();
+        applyTheme();
+        if (notificationsEnabled) {
+            showToast('Notifications enabled', 'success');
+        } else {
+            showToast('Notifications disabled', 'info');
+        }
+    } else {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            notificationsEnabled = true;
+            saveNotifications();
+            applyTheme();
+            showToast('Notifications enabled', 'success');
+        } else {
+            alert('Permission denied.');
+        }
+    }
+});
+
 // ---------- Initialize ----------
 function initialize() {
-    // Generate palette buttons
     generatePaletteButtons();
-
-    // Ensure existing savings have accountId
-    if (accounts.length > 0) {
-        savings.forEach(s => {
-            if (!s.accountId) {
-                s.accountId = accounts[0].id;
-            }
-        });
-        saveSavings();
-    }
-
+    // Ensure existing savings have createdAt and initialAmount if missing
+    savings.forEach(s => {
+        if (!s.createdAt) {
+            s.createdAt = new Date().toISOString();
+        }
+        if (s.initialAmount === undefined) {
+            s.initialAmount = s.current || 0;
+        }
+    });
+    saveSavings();
     applyTheme();
     renderAll();
     if (document.getElementById('tab-charts').classList.contains('active')) {
         renderCharts();
     }
+    if (document.getElementById('tab-budget').classList.contains('active')) {
+        renderBudgetChart();
+    }
+    // Check bill reminders on load
+    updateBillBadge();
 }
 
 initialize();

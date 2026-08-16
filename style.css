@@ -19,7 +19,7 @@
     --border-radius: 20px;
     --nav-height: 70px;
     --fab-size: 56px;
-    --card-alpha: 0.65; /* Default transparency for glass */
+    --card-alpha: 0.65;
 }
 
 /* ================= DARK MODE OVERRIDES ================= */
@@ -96,7 +96,6 @@ body[data-theme="normal"].dark-theme {
 }
 
 /* ================= COLOR PALETTES ================= */
-/* Each palette overrides accent & gradient for both light and dark */
 body[data-palette="rose"] {
     --accent: #ec4899;
     --accent-hover: #db2777;
@@ -174,7 +173,27 @@ body[data-palette="slate"].dark-theme {
     --bg-gradient: linear-gradient(135deg, #0f172a, #1e293b, #334155);
 }
 
-/* Default (blue) is already defined in :root and dark-theme */
+/* ================= FONT SIZE & DENSITY ================= */
+body[data-font-size="small"] {
+    font-size: 14px;
+}
+body[data-font-size="medium"] {
+    font-size: 16px;
+}
+body[data-font-size="large"] {
+    font-size: 18px;
+}
+
+body[data-density="comfortable"] {
+    --item-padding: 14px;
+    --section-padding: 20px;
+    --gap: 12px;
+}
+body[data-density="compact"] {
+    --item-padding: 8px;
+    --section-padding: 12px;
+    --gap: 6px;
+}
 
 /* ================= GLOBAL STYLES ================= */
 * {
@@ -193,6 +212,7 @@ body {
     padding: 0;
     margin: 0;
     overflow-x: hidden;
+    font-size: 1rem;
 }
 
 .container {
@@ -203,7 +223,7 @@ body {
     -webkit-backdrop-filter: var(--backdrop-filter);
     border: var(--card-border);
     border-radius: 28px;
-    padding: 20px 20px calc(var(--nav-height) + 30px);
+    padding: var(--section-padding, 20px) var(--section-padding, 20px) calc(var(--nav-height) + 30px);
     box-shadow: var(--shadow);
     color: var(--text-primary);
     position: relative;
@@ -257,8 +277,8 @@ h1 {
 }
 
 .section {
-    padding: 20px;
-    margin-bottom: 20px;
+    padding: var(--section-padding, 20px);
+    margin-bottom: var(--gap, 20px);
     border-radius: var(--border-radius);
     animation: fadeIn 0.3s ease;
 }
@@ -284,19 +304,20 @@ h1 {
 
 .tab-content.active {
     display: block;
+    animation: slideIn 0.3s ease;
 }
 
 /* ================= SUMMARY CARDS ================= */
 .summary {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: var(--gap, 12px);
+    margin-bottom: var(--gap, 20px);
 }
 
 .card {
     flex: 1;
-    padding: 18px 12px;
+    padding: var(--item-padding, 18px) 12px;
     border-radius: var(--border-radius);
     text-align: center;
     transition: transform 0.2s;
@@ -340,9 +361,9 @@ h1 {
 /* ================= NET WORTH CARD ================= */
 .net-worth-card {
     background: rgba(139, 92, 246, 0.15);
-    margin-bottom: 20px;
+    margin-bottom: var(--gap, 20px);
     text-align: center;
-    padding: 20px;
+    padding: var(--section-padding, 20px);
 }
 
 .net-worth-card h2 {
@@ -390,7 +411,7 @@ input, select {
     padding: 12px 14px;
     border: var(--input-border);
     border-radius: 12px;
-    font-size: 16px;
+    font-size: 1rem;
     width: 100%;
     background: var(--input-bg);
     color: var(--text-primary);
@@ -426,7 +447,7 @@ input:focus, select:focus {
     border: none;
     border-radius: 12px;
     padding: 14px 20px;
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
@@ -479,13 +500,14 @@ input:focus, select:focus {
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: 0.7rem;
+    font-size: 0.7rem;          /* original */
     cursor: pointer;
-    padding: 6px 12px;
+    padding: 6px 12px;           /* original */
     border-radius: 16px;
     transition: all 0.2s;
-    gap: 4px;
+    gap: 2px;                   /* original effective gap */
     font-weight: 500;
+    position: relative;
 }
 
 .nav-item.active {
@@ -523,11 +545,29 @@ input:focus, select:focus {
     transform: scale(0.95);
 }
 
+/* ================= BADGE ================= */
+.badge {
+    position: absolute;
+    top: -2px;
+    right: 2px;
+    background: var(--expense-color);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
 /* ================= MORE GRID ================= */
 .more-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: var(--gap, 12px);
     margin-top: 15px;
 }
 
@@ -535,13 +575,13 @@ input:focus, select:focus {
     background: var(--card-bg);
     border: var(--card-border);
     border-radius: 16px;
-    padding: 20px 10px;
-    font-size: 1rem;
+    padding: 20px 10px;          /* original */
+    font-size: 1rem;             /* original */
     cursor: pointer;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 8px;                    /* original */
     color: var(--text-primary);
     font-weight: 500;
     transition: transform 0.2s, background 0.2s;
@@ -611,7 +651,7 @@ input:focus, select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px;
+    padding: var(--item-padding, 14px);
     background: var(--card-bg);
     border-radius: 14px;
     margin-bottom: 8px;
@@ -688,7 +728,7 @@ input:focus, select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px;
+    padding: var(--item-padding, 12px);
     background: var(--card-bg);
     border-radius: 14px;
     margin-bottom: 8px;
@@ -854,7 +894,7 @@ input:focus, select:focus {
     box-shadow: 0 0 0 2px var(--accent);
 }
 
-/* ================= SETTINGS SPECIFIC (NEW) ================= */
+/* ================= SETTINGS SPECIFIC ================= */
 .setting-group {
     margin-bottom: 25px;
 }
@@ -914,45 +954,61 @@ input:focus, select:focus {
     border: 1px solid rgba(0,0,0,0.1);
 }
 
-/* ================= DOT INDICATORS ================= */
-.dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-left: 5px;
+/* ================= TOAST NOTIFICATIONS ================= */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.dot.over { background: var(--expense-color); }
-.dot.warning { background: var(--warning-color); }
-
+.toast {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: var(--card-border);
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: var(--shadow);
+    color: var(--text-primary);
+    font-weight: 500;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 4s forwards;
+    max-width: 300px;
+}
 /* ================= SVG ICON SIZING ================= */
 .icon {
     width: 20px;
     height: 20px;
     vertical-align: middle;
     display: inline-block;
+    flex-shrink: 0;
 }
 
 .nav-icon {
     width: 22px;
     height: 22px;
+    flex-shrink: 0;
 }
 
 .delete-btn .icon,
 .paid-btn .icon {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
 }
 
 .theme-toggle .icon {
     width: 20px;
     height: 20px;
+    flex-shrink: 0;
 }
 
 .modal-close .icon {
     width: 18px;
     height: 18px;
+    flex-shrink: 0;
 }
 
 /* Ensure buttons with icons are centered */
@@ -962,23 +1018,30 @@ button {
     justify-content: center;
     gap: 4px;
 }
-
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-
 /* ================= ANIMATIONS ================= */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
+@keyframes slideIn {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 @keyframes slideUp {
     from { transform: translateY(30px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
 }
 
 /* ================= RESPONSIVE TWEAKS ================= */
