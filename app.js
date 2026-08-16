@@ -792,124 +792,6 @@ function renderCharts() {
     if (netWorthChartInstance) netWorthChartInstance.destroy();
     if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy();
 
-    // 1. Income vs Expense Bar Chart
-    const months = [];
-    const incomeData = [];
-    const expenseData = [];
-    const today = new Date();
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const monthKey = getMonthKeyFromDate(d);
-        months.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
-        let inc = 0, exp = 0;
-        transactions.forEach(t => {
-            if (t.date.slice(0, 7) === monthKey) {
-                if (t.amount > 0) inc += t.amount;
-                else exp += Math.abs(t.amount);
-            }
-        });
-      // Daily Income vs Expense (last 7 days)
-const days = [];
-const dailyIncomeData = [];
-const dailyExpenseData = [];
-const todayDaily = new Date();
-
-for (let i = 6; i >= 0; i--) {
-    const d = new Date(todayDaily);
-    d.setDate(todayDaily.getDate() - i);
-    const dayKey = getDayKeyFromDate(d);
-    days.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
-
-    let inc = 0, exp = 0;
-    transactions.forEach(t => {
-        if (t.date.slice(0, 10) === dayKey) {
-            if (t.amount > 0) inc += t.amount;
-            else exp += Math.abs(t.amount);
-        }
-    });
-    dailyIncomeData.push(inc);
-    dailyExpenseData.push(exp);
-}
-
-const ctxDaily = document.getElementById('dailyIncomeExpenseChart').getContext('2d');
-dailyIncomeExpenseChartInstance = new Chart(ctxDaily, {
-    type: 'bar',
-    data: {
-        labels: days,
-        datasets: [
-            {
-                label: 'Income',
-                data: dailyIncomeData,
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: 'rgba(16, 185, 129, 1)',
-                borderWidth: 1,
-                borderRadius: 6,
-            },
-            {
-                label: 'Expense',
-                data: dailyExpenseData,
-                backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                borderColor: 'rgba(239, 68, 68, 1)',
-                borderWidth: 1,
-                borderRadius: 6,
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
-                grid: { color: 'rgba(0,0,0,0.1)' }
-            },
-            x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
-        }
-    }
-});
-        incomeData.push(inc);
-        expenseData.push(exp);
-    }
-
-    const ctx1 = document.getElementById('incomeExpenseChart').getContext('2d');
-    incomeExpenseChartInstance = new Chart(ctx1, {
-        type: 'bar',
-        data: {
-            labels: months,
-            datasets: [
-                {
-                    label: 'Income',
-                    data: incomeData,
-                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                    borderColor: 'rgba(16, 185, 129, 1)',
-                    borderWidth: 1,
-                    borderRadius: 6,
-                },
-                {
-                    label: 'Expense',
-                    data: expenseData,
-                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                    borderColor: 'rgba(239, 68, 68, 1)',
-                    borderWidth: 1,
-                    borderRadius: 6,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
-            scales: {
-                y: {
-function renderCharts() {
-    if (dailyIncomeExpenseChartInstance) dailyIncomeExpenseChartInstance.destroy();
-    if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
-    if (categoryPieChartInstance) categoryPieChartInstance.destroy();
-    if (netWorthChartInstance) netWorthChartInstance.destroy();
-    if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy();
-
     // ========== 1. MONTHLY Income vs Expense Bar Chart ==========
     const months = [];
     const incomeData = [];
@@ -1147,7 +1029,6 @@ function renderCharts() {
         });
     }
 }
-
 // NEW: Render Budget vs Actual Bar Chart
 function renderBudgetChart() {
     if (budgetChartInstance) budgetChartInstance.destroy();
