@@ -14,6 +14,9 @@ let currentFilter = 'all';
 let searchQuery = '';
 let isDarkMode = localStorage.getItem('mb_theme') === 'dark';
 let currentThemeStyle = localStorage.getItem('mb_theme_style') || 'glass';
+// NEW: Transparency & Palette
+let transparency = parseFloat(localStorage.getItem('mb_transparency')) || 0.65;
+let currentPalette = localStorage.getItem('mb_palette') || 'default';
 
 // Chart.js instances
 let incomeExpenseChartInstance = null;
@@ -31,6 +34,9 @@ function saveBills() { localStorage.setItem('mb_bills', JSON.stringify(bills)); 
 function saveNetWorthHistory() { localStorage.setItem('mb_networth_history', JSON.stringify(netWorthHistory)); }
 function saveTheme() { localStorage.setItem('mb_theme', isDarkMode ? 'dark' : 'light'); }
 function saveThemeStyle() { localStorage.setItem('mb_theme_style', currentThemeStyle); }
+// NEW: Save transparency & palette
+function saveTransparency() { localStorage.setItem('mb_transparency', transparency); }
+function savePalette() { localStorage.setItem('mb_palette', currentPalette); }
 
 // ---------- Utilities ----------
 function formatCurrency(val) {
@@ -59,15 +65,16 @@ function getMonthKeyFromDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// ---------- New helper: total savings for a specific account ----------
+// ---------- Helper: total savings for account ----------
 function getSavingsTotalForAccount(accountId) {
     return savings
         .filter(s => s.accountId === accountId)
         .reduce((sum, s) => sum + (s.current || 0), 0);
 }
 
-// ---------- Theme ----------
+// ---------- Theme & Settings ----------
 function applyTheme() {
+    // Dark mode
     if (isDarkMode) {
         document.body.classList.add('dark-theme');
         document.getElementById('theme-toggle').innerHTML = `
@@ -89,16 +96,47 @@ function applyTheme() {
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>`;
     }
+    // UI Style
     document.body.setAttribute('data-theme', currentThemeStyle);
     document.querySelectorAll('.theme-option-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.themeStyle === currentThemeStyle);
     });
+
+    // NEW: Apply transparency variable
+    document.documentElement.style.setProperty('--card-alpha', transparency);
+
+    // NEW: Apply palette
+    document.body.setAttribute('data-palette', currentPalette);
+    document.querySelectorAll('.palette-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.palette === currentPalette);
+    });
+
+    // Update transparency slider position
+    const slider = document.getElementById('transparency-slider');
+    if (slider) {
+        slider.value = transparency;
+        document.getElementById('transparency-value').textContent = transparency;
+    }
 }
 
 function setThemeStyle(style) {
     if (!['glass', 'neumorphism', 'normal'].includes(style)) return;
     currentThemeStyle = style;
     saveThemeStyle();
+    applyTheme();
+}
+
+// NEW: Set transparency
+function setTransparency(value) {
+    transparency = Math.min(0.9, Math.max(0.1, value));
+    saveTransparency();
+    applyTheme();
+}
+
+// NEW: Set palette
+function setPalette(palette) {
+    currentPalette = palette;
+    savePalette();
     applyTheme();
 }
 
@@ -259,7 +297,6 @@ function getCategorySpending(monthKey) {
 
 // ---------- Net Worth ----------
 function getNetWorth() {
-    // Effective account balance includes linked savings
     const accountTotal = accounts.reduce((sum, acc) => {
         return sum + acc.balance + getSavingsTotalForAccount(acc.id);
     }, 0);
@@ -477,7 +514,7 @@ function renderSummary() {
 
     const netWorth = getNetWorth();
     document.getElementById('net-worth').innerHTML = formatCurrencyWithColor(netWorth);
-    const accountTotal = totalBalance; // already includes savings
+    const accountTotal = totalBalance;
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
     document.getElementById('net-worth-breakdown').textContent = 
@@ -775,6 +812,35 @@ function closeTransactionModal() {
     document.getElementById('transaction-form').reset();
 }
 
+// ---------- Settings UI Generation (NEW) ----------
+const PALETTES = [
+    { id: 'default', name: 'Default', swatch: '#3b82f6' },
+    { id: 'rose', name: 'Rose', swatch: '#ec4899' },
+    { id: 'lavender', name: 'Lavender', swatch: '#8b5cf6' },
+    { id: 'ocean', name: 'Ocean', swatch: '#0ea5e9' },
+    { id: 'forest', name: 'Forest', swatch: '#10b981' },
+    { id: 'sunset', name: 'Sunset', swatch: '#f97316' },
+    { id: 'cherry', name: 'Cherry', swatch: '#e11d48' },
+    { id: 'slate', name: 'Slate', swatch: '#64748b' }
+];
+
+function generatePaletteButtons() {
+    const container = document.getElementById('palette-grid');
+    if (!container) return;
+    container.innerHTML = '';
+    PALETTES.forEach(palette => {
+        const btn = document.createElement('button');
+        btn.className = 'palette-btn';
+        btn.dataset.palette = palette.id;
+        btn.innerHTML = `
+            <span class="palette-swatch" style="background: ${palette.swatch};"></span>
+            ${palette.name}
+        `;
+        btn.addEventListener('click', () => setPalette(palette.id));
+        container.appendChild(btn);
+    });
+}
+
 // ---------- Event Listeners ----------
 document.getElementById('theme-toggle').addEventListener('click', () => {
     isDarkMode = !isDarkMode;
@@ -904,8 +970,19 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
+// NEW: Settings event listeners
+document.getElementById('transparency-slider').addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    document.getElementById('transparency-value').textContent = val.toFixed(2);
+    setTransparency(val);
+});
+
 // ---------- Initialize ----------
 function initialize() {
+    // Generate palette buttons
+    generatePaletteButtons();
+
+    // Ensure existing savings have accountId
     if (accounts.length > 0) {
         savings.forEach(s => {
             if (!s.accountId) {
@@ -914,6 +991,7 @@ function initialize() {
         });
         saveSavings();
     }
+
     applyTheme();
     renderAll();
     if (document.getElementById('tab-charts').classList.contains('active')) {
