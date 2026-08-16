@@ -89,9 +89,9 @@ function deleteAccount(id) {
 }
 
 // ---------- Savings Operations ----------
-function addSavingsGoal(name, target, current) {
+function addSavingsGoal(name, target, current, accountId) {
     const id = 'sav' + Date.now();
-    savings.push({ id, name, target, current });
+    savings.push({ id, name, target, current, accountId });
     saveSavings();
     renderAll();
 }
@@ -213,10 +213,9 @@ function getCategorySpending(monthKey) {
 // ---------- Net Worth ----------
 function getNetWorth() {
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
-    return accountTotal + savingsTotal + lentTotal - borrowedTotal;
+    return accountTotal + lentTotal - borrowedTotal;
 }
 
 function recordNetWorthSnapshot() {
@@ -261,6 +260,17 @@ function renderAccounts() {
             accountSelect.appendChild(option);
         });
     }
+    // Populate savings account select
+    const savingsAccountSelect = document.getElementById('savings-account');
+    if (savingsAccountSelect) {
+        savingsAccountSelect.innerHTML = '';
+        accounts.forEach(acc => {
+            const option = document.createElement('option');
+            option.value = acc.id;
+            option.textContent = acc.name;
+            savingsAccountSelect.appendChild(option);
+        });
+    }
 }
 
 function renderSavings() {
@@ -271,11 +281,13 @@ function renderSavings() {
     } else {
         savings.forEach(goal => {
             const percent = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
+            const account = accounts.find(acc => acc.id === goal.accountId);
+            const accountName = account ? account.name : 'No account';
             const div = document.createElement('div');
             div.className = 'savings-item';
             div.innerHTML = `
                 <div style="flex:1;">
-                    <div class="savings-name">${goal.name}</div>
+                    <div class="savings-name">${goal.name} <small>(${accountName})</small></div>
                     <div class="savings-progress">${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</div>
                     <div class="progress-bar">
                         <div class="progress-fill ${percent >= 100 ? 'over' : ''}" style="width: ${percent}%"></div>
@@ -357,11 +369,10 @@ function renderSummary() {
     const netWorth = getNetWorth();
     document.getElementById('net-worth').textContent = formatCurrency(netWorth);
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
-    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
     document.getElementById('net-worth-breakdown').textContent = 
-        `Accounts: ${formatCurrency(accountTotal)} + Savings: ${formatCurrency(savingsTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
+        `Accounts: ${formatCurrency(accountTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
 }
 
 function renderTransactionList() {
@@ -689,13 +700,14 @@ document.getElementById('add-savings-btn').addEventListener('click', () => {
     const name = document.getElementById('savings-name').value.trim();
     const target = parseFloat(document.getElementById('savings-target').value);
     const current = parseFloat(document.getElementById('savings-current').value) || 0;
-    if (name && !isNaN(target) && target > 0) {
-        addSavingsGoal(name, target, current);
+    const accountId = document.getElementById('savings-account').value;
+    if (name && !isNaN(target) && target > 0 && accountId) {
+        addSavingsGoal(name, target, current, accountId);
         document.getElementById('savings-name').value = '';
         document.getElementById('savings-target').value = '';
         document.getElementById('savings-current').value = '';
     } else {
-        alert('Please enter a valid goal name and target amount.');
+        alert('Please enter a valid goal name, target amount, and select an account.');
     }
 });
 
@@ -752,6 +764,15 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 // ---------- Initialize ----------
 function initialize() {
+    // Migrate old savings (without accountId) to first account
+    if (accounts.length > 0) {
+        savings.forEach(s => {
+            if (!s.accountId) {
+                s.accountId = accounts[0].id;
+            }
+        });
+        saveSavings();
+    }
     applyTheme();
     renderAll();
     // If charts tab is active initially (unlikely), render charts
