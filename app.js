@@ -213,9 +213,10 @@ function getCategorySpending(monthKey) {
 // ---------- Net Worth ----------
 function getNetWorth() {
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
-    return accountTotal + lentTotal - borrowedTotal;
+    return accountTotal + savingsTotal + lentTotal - borrowedTotal;
 }
 
 function recordNetWorthSnapshot() {
@@ -369,10 +370,11 @@ function renderSummary() {
     const netWorth = getNetWorth();
     document.getElementById('net-worth').textContent = formatCurrency(netWorth);
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+    const savingsTotal = savings.reduce((sum, s) => sum + s.current, 0);
     const lentTotal = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
     const borrowedTotal = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
     document.getElementById('net-worth-breakdown').textContent = 
-        `Accounts: ${formatCurrency(accountTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
+        `Accounts: ${formatCurrency(accountTotal)} + Savings: ${formatCurrency(savingsTotal)} + Lent: ${formatCurrency(lentTotal)} - Borrowed: ${formatCurrency(borrowedTotal)}`;
 }
 
 function renderTransactionList() {
