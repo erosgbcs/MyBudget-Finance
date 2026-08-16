@@ -27,7 +27,7 @@ let categoryPieChartInstance = null;
 let netWorthChartInstance = null;
 let accountsDoughnutChartInstance = null;
 let budgetChartInstance = null; // NEW
-
+let dailyIncomeExpenseChartInstance = null;
 // ---------- Save Functions ----------
 function saveAccounts() { localStorage.setItem('mb_accounts', JSON.stringify(accounts)); }
 function saveTransactions() { localStorage.setItem('mb_transactions', JSON.stringify(transactions)); }
@@ -75,6 +75,9 @@ function getSavingsTotalForAccount(accountId) {
     return savings
         .filter(s => s.accountId === accountId)
         .reduce((sum, s) => sum + (s.current || 0), 0);
+}
+function getDayKeyFromDate(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 // ---------- Toast Notifications (NEW) ----------
@@ -783,6 +786,7 @@ function renderBudgets() {
 
 // ---------- Charts ----------
 function renderCharts() {
+    if (dailyIncomeExpenseChartInstance) dailyIncomeExpenseChartInstance.destroy();
     if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
     if (categoryPieChartInstance) categoryPieChartInstance.destroy();
     if (netWorthChartInstance) netWorthChartInstance.destroy();
@@ -793,6 +797,125 @@ function renderCharts() {
     const incomeData = [];
     const expenseData = [];
     const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const monthKey = getMonthKeyFromDate(d);
+        months.push(d.toLocaleString('default', { month: 'short', year: '2-digit' }));
+        let inc = 0, exp = 0;
+        transactions.forEach(t => {
+            if (t.date.slice(0, 7) === monthKey) {
+                if (t.amount > 0) inc += t.amount;
+                else exp += Math.abs(t.amount);
+            }
+        });
+      // Daily Income vs Expense (last 7 days)
+const days = [];
+const dailyIncomeData = [];
+const dailyExpenseData = [];
+const todayDaily = new Date();
+
+for (let i = 6; i >= 0; i--) {
+    const d = new Date(todayDaily);
+    d.setDate(todayDaily.getDate() - i);
+    const dayKey = getDayKeyFromDate(d);
+    days.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+
+    let inc = 0, exp = 0;
+    transactions.forEach(t => {
+        if (t.date.slice(0, 10) === dayKey) {
+            if (t.amount > 0) inc += t.amount;
+            else exp += Math.abs(t.amount);
+        }
+    });
+    dailyIncomeData.push(inc);
+    dailyExpenseData.push(exp);
+}
+
+const ctxDaily = document.getElementById('dailyIncomeExpenseChart').getContext('2d');
+dailyIncomeExpenseChartInstance = new Chart(ctxDaily, {
+    type: 'bar',
+    data: {
+        labels: days,
+        datasets: [
+            {
+                label: 'Income',
+                data: dailyIncomeData,
+                backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+            },
+            {
+                label: 'Expense',
+                data: dailyExpenseData,
+                backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+                grid: { color: 'rgba(0,0,0,0.1)' }
+            },
+            x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
+        }
+    }
+});
+        incomeData.push(inc);
+        expenseData.push(exp);
+    }
+
+    const ctx1 = document.getElementById('incomeExpenseChart').getContext('2d');
+    incomeExpenseChartInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                },
+                {
+                    label: 'Expense',
+                    data: expenseData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+            scales: {
+                y: {
+function renderCharts() {
+    if (dailyIncomeExpenseChartInstance) dailyIncomeExpenseChartInstance.destroy();
+    if (incomeExpenseChartInstance) incomeExpenseChartInstance.destroy();
+    if (categoryPieChartInstance) categoryPieChartInstance.destroy();
+    if (netWorthChartInstance) netWorthChartInstance.destroy();
+    if (accountsDoughnutChartInstance) accountsDoughnutChartInstance.destroy();
+
+    // ========== 1. MONTHLY Income vs Expense Bar Chart ==========
+    const months = [];
+    const incomeData = [];
+    const expenseData = [];
+    const today = new Date();
+
     for (let i = 5; i >= 0; i--) {
         const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
         const monthKey = getMonthKeyFromDate(d);
@@ -847,7 +970,69 @@ function renderCharts() {
         }
     });
 
-    // 2. Category Spending Doughnut
+    // ========== 2. DAILY Income vs Expense Bar Chart (last 7 days) ==========
+    const days = [];
+    const dailyIncomeData = [];
+    const dailyExpenseData = [];
+    const todayDaily = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(todayDaily);
+        d.setDate(todayDaily.getDate() - i);
+        const dayKey = getDayKeyFromDate(d);
+        days.push(d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+
+        let inc = 0, exp = 0;
+        transactions.forEach(t => {
+            if (t.date.slice(0, 10) === dayKey) {
+                if (t.amount > 0) inc += t.amount;
+                else exp += Math.abs(t.amount);
+            }
+        });
+        dailyIncomeData.push(inc);
+        dailyExpenseData.push(exp);
+    }
+
+    const ctxDaily = document.getElementById('dailyIncomeExpenseChart').getContext('2d');
+    dailyIncomeExpenseChartInstance = new Chart(ctxDaily, {
+        type: 'bar',
+        data: {
+            labels: days,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: dailyIncomeData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                },
+                {
+                    label: 'Expense',
+                    data: dailyExpenseData,
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: value => '₱' + value, color: getComputedStyle(document.body).getPropertyValue('--text-secondary') },
+                    grid: { color: 'rgba(0,0,0,0.1)' }
+                },
+                x: { ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-secondary') } }
+            }
+        }
+    });
+
+    // ========== 3. Category Spending Doughnut ==========
     const currentMonthKey = getMonthKey();
     const categorySpending = getCategorySpending(currentMonthKey);
     const categories = Object.keys(categorySpending);
@@ -879,7 +1064,7 @@ function renderCharts() {
         }
     });
 
-    // 3. Accounts Distribution Doughnut
+    // ========== 4. Accounts Distribution Doughnut ==========
     const accountLabels = accounts.map(acc => acc.name);
     const accountBalances = accounts.map(acc => acc.balance + getSavingsTotalForAccount(acc.id));
     const ctx3 = document.getElementById('accountsDoughnutChart').getContext('2d');
@@ -907,59 +1092,60 @@ function renderCharts() {
         }
     });
 
-    // 4. Net Worth Line Chart
+    // ========== 5. Net Worth Line Chart (with date & time) ==========
     if (netWorthHistory.length > 0) {
-    const labels = netWorthHistory.map(entry => {
-        const d = new Date(entry.date);
-        return d.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+        const labels = netWorthHistory.map(entry => {
+            const d = new Date(entry.date);
+            return d.toLocaleString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         });
-    });
-    const values = netWorthHistory.map(entry => entry.value);
+        const values = netWorthHistory.map(entry => entry.value);
 
-    const ctx4 = document.getElementById('netWorthChart').getContext('2d');
-    netWorthChartInstance = new Chart(ctx4, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Net Worth',
-                data: values,
-                borderColor: 'rgba(139, 92, 246, 1)',
-                backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 3,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
-            scales: {
-                y: {
-                    beginAtZero: false,
-                    ticks: { 
-                        callback: value => '₱' + value, 
-                        color: getComputedStyle(document.body).getPropertyValue('--text-secondary') 
+        const ctx4 = document.getElementById('netWorthChart').getContext('2d');
+        netWorthChartInstance = new Chart(ctx4, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Net Worth',
+                    data: values,
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') } } },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: { 
+                            callback: value => '₱' + value, 
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary') 
+                        },
+                        grid: { color: 'rgba(0,0,0,0.1)' }
                     },
-                    grid: { color: 'rgba(0,0,0,0.1)' }
-                },
-                x: {
-                    ticks: { 
-                        color: getComputedStyle(document.body).getPropertyValue('--text-secondary'),
-                        maxRotation: 45,
-                        autoSkip: true,
-                        maxTicksLimit: 10
-                    },
-                    grid: { display: false }
+                    x: {
+                        ticks: { 
+                            color: getComputedStyle(document.body).getPropertyValue('--text-secondary'),
+                            maxRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: 10
+                        },
+                        grid: { display: false }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 }
 
 // NEW: Render Budget vs Actual Bar Chart
