@@ -1,21 +1,24 @@
 {
-  "name": "MyBudget Finance",
+  "name": "MyBudget-Finance",
   "short_name": "MyBudget",
-  "description": "Personal budget and expense tracking app",
-  "start_url": "./",
+  "description": "Personal finance, expense tracking, and budget management web application.",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f4f6f8",
-  "theme_color": "#007bff",
+  "background_color": "#e0e7ff",
+  "theme_color": "#1976d2",
+  "orientation": "any",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://via.placeholder.com/512",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
