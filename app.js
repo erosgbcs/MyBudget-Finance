@@ -1138,6 +1138,118 @@ function updateBillBadge() {
         }
     }
 }
+// ---------- Backup & Restore Functions (NEW) ----------
+function backupData() {
+    const data = {
+        accounts,
+        transactions,
+        budgets,
+        savings,
+        loans,
+        bills,
+        netWorthHistory,
+        settings: {
+            isDarkMode,
+            currentThemeStyle,
+            transparency,
+            currentPalette,
+            fontSize,
+            density,
+            notificationsEnabled
+        }
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mybudget-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('Backup downloaded!', 'success');
+    const status = document.getElementById('backup-status');
+    if (status) {
+        status.textContent = 'Backup saved successfully.';
+        status.className = 'positive';
+    }
+}
+
+function restoreData(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // Validate required fields
+            if (!data.accounts || !data.transactions || !data.savings || !data.loans || !data.bills) {
+                throw new Error('Invalid backup file');
+            }
+
+            // Confirm before overwriting
+            if (!confirm('This will overwrite all current data. Continue?')) {
+                return;
+            }
+
+            // Restore data
+            accounts = data.accounts;
+            transactions = data.transactions;
+            budgets = data.budgets || {};
+            savings = data.savings;
+            loans = data.loans;
+            bills = data.bills;
+            netWorthHistory = data.netWorthHistory || [];
+
+            // Restore settings if present
+            if (data.settings) {
+                isDarkMode = data.settings.isDarkMode || false;
+                currentThemeStyle = data.settings.currentThemeStyle || 'glass';
+                transparency = data.settings.transparency || 0.65;
+                currentPalette = data.settings.currentPalette || 'default';
+                fontSize = data.settings.fontSize || 'medium';
+                density = data.settings.density || 'comfortable';
+                notificationsEnabled = data.settings.notificationsEnabled || false;
+            }
+
+            // Save everything to localStorage
+            saveAccounts();
+            saveTransactions();
+            saveBudgets();
+            saveSavings();
+            saveLoans();
+            saveBills();
+            saveNetWorthHistory();
+            saveTheme();
+            saveThemeStyle();
+            saveTransparency();
+            savePalette();
+            saveFontSize();
+            saveDensity();
+            saveNotifications();
+
+            // Re-render and apply theme
+            applyTheme();
+            renderAll();
+
+            showToast('Data restored successfully!', 'success');
+            const status = document.getElementById('backup-status');
+            if (status) {
+                status.textContent = 'Data restored successfully.';
+                status.className = 'positive';
+            }
+        } catch (error) {
+            alert('Error restoring backup: ' + error.message);
+            const status = document.getElementById('backup-status');
+            if (status) {
+                status.textContent = 'Restore failed: ' + error.message;
+                status.className = 'negative';
+            }
+        }
+    };
+    reader.readAsText(file);
+}
 function checkForDateChange() {
     const now = new Date();
     const todayString = now.toDateString();
@@ -1398,7 +1510,21 @@ document.getElementById('enable-notifications-btn').addEventListener('click', as
         }
     }
 });
+// NEW: Backup & Restore event listeners
+document.getElementById('backup-data-btn').addEventListener('click', backupData);
 
+document.getElementById('restore-data-btn').addEventListener('click', () => {
+    document.getElementById('restore-file-input').click();
+});
+
+document.getElementById('restore-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        restoreData(file);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+});
 // ---------- Initialize ----------
 function initialize() {
     generatePaletteButtons();
@@ -1424,5 +1550,6 @@ function initialize() {
     // Check bill reminders on load
     updateBillBadge();
 }
+
 
 initialize();
