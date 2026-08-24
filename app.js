@@ -293,38 +293,49 @@ function toggleBillPaid(id) {
     }
 }
 
-// ---------- Transaction Operations ----------
 function addTransaction(description, amount, type, category, accountId, transferToAccountId = null) {
     if (type === 'transfer') {
-        // Create two transactions: expense from source, income to destination
         const fromAccount = accounts.find(acc => acc.id === accountId);
         const toAccount = accounts.find(acc => acc.id === transferToAccountId);
+
         if (!fromAccount || !toAccount) {
             alert('Please select valid accounts for transfer.');
             return;
         }
+        if (fromAccount.id === toAccount.id) {
+            alert('Source and destination accounts must be different.');
+            return;
+        }
+
         const transferAmount = Math.abs(amount);
-        // Deduct from source
+        const transferGroupId = 'trf-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+
         const expenseTx = {
             id: Date.now(),
+            transferGroupId,
+            type: 'transfer',
             description: `Transfer to ${toAccount.name}`,
             amount: -transferAmount,
             category: 'Transfer',
             accountId: fromAccount.id,
             date: new Date().toISOString()
         };
-        // Add to destination
+
         const incomeTx = {
             id: Date.now() + 1,
+            transferGroupId,
+            type: 'transfer',
             description: `Transfer from ${fromAccount.name}`,
             amount: transferAmount,
             category: 'Transfer',
             accountId: toAccount.id,
             date: new Date().toISOString()
         };
+
         transactions.push(expenseTx, incomeTx);
         fromAccount.balance -= transferAmount;
         toAccount.balance += transferAmount;
+
         saveTransactions();
         saveAccounts();
         renderAll();
@@ -333,6 +344,7 @@ function addTransaction(description, amount, type, category, accountId, transfer
         const signedAmount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
         const transaction = {
             id: Date.now(),
+            type,                        // 'income' or 'expense'
             description,
             amount: signedAmount,
             category,
@@ -345,7 +357,7 @@ function addTransaction(description, amount, type, category, accountId, transfer
         saveTransactions();
         saveAccounts();
         renderAll();
-        // Budget notification check for expense
+
         if (type === 'expense') {
             checkBudgetAlerts(category);
         }
@@ -354,14 +366,26 @@ function addTransaction(description, amount, type, category, accountId, transfer
 
 function deleteTransaction(id) {
     const transaction = transactions.find(t => t.id === id);
-    if (transaction) {
+    if (!transaction) return;
+
+    if (transaction.transferGroupId) {
+        const linked = transactions.filter(t => t.transferGroupId === transaction.transferGroupId);
+
+        linked.forEach(t => {
+            const account = accounts.find(acc => acc.id === t.accountId);
+            if (account) account.balance -= t.amount;
+        });
+
+        transactions = transactions.filter(t => t.transferGroupId !== transaction.transferGroupId);
+    } else {
         const account = accounts.find(acc => acc.id === transaction.accountId);
         if (account) account.balance -= transaction.amount;
         transactions = transactions.filter(t => t.id !== id);
-        saveTransactions();
-        saveAccounts();
-        renderAll();
     }
+
+    saveTransactions();
+    saveAccounts();
+    renderAll();
 }
 
 function setBudget(category, limit) {
@@ -377,10 +401,11 @@ function getMonthlyIncomeExpense() {
     const monthKey = getMonthKey();
     let income = 0, expense = 0;
     transactions.forEach(t => {
-        if (t.date.slice(0, 7) === monthKey) {
-            if (t.amount > 0) income += t.amount;
-            else expense += Math.abs(t.amount);
-        }
+        const txMonth = getMonthKeyFromTransaction(t);
+        if (txMonth !== monthKey) return;
+        if (t.type === 'income') income += t.amount;
+        else if (t.type === 'expense') expense += Math.abs(t.amount);
+        // transfers are ignored
     });
     return { income, expense, balance: income - expense };
 }
@@ -388,10 +413,10 @@ function getMonthlyIncomeExpense() {
 function getCategorySpending(monthKey) {
     const spending = {};
     transactions.forEach(t => {
-        if (t.date.slice(0, 7) === monthKey && t.amount < 0) {
-            const cat = t.category || 'Other';
-            spending[cat] = (spending[cat] || 0) + Math.abs(t.amount);
-        }
+        if (getMonthKeyFromTransaction(t) !== monthKey) return;
+        if (t.type !== 'expense') return;          // only expenses
+        const cat = t.category || 'Other';
+        spending[cat] = (spending[cat] || 0) + Math.abs(t.amount);
     });
     return spending;
 }
@@ -686,13 +711,18 @@ function renderSummary() {
 function renderTransactionList() {
     const list = document.getElementById('transaction-list');
     list.innerHTML = '';
+
     const filtered = transactions.filter(t => {
-        const matchesFilter = currentFilter === 'all' || 
-            (currentFilter === 'income' && t.amount > 0) || 
-            (currentFilter === 'expense' && t.amount < 0);
+        const matchesFilter =
+            currentFilter === 'all' ||
+            (currentFilter === 'income' && t.type === 'income') ||
+            (currentFilter === 'expense' && t.type === 'expense');
+
         const searchLower = searchQuery.toLowerCase();
-        const matchesSearch = t.description.toLowerCase().includes(searchLower) || 
-                              (t.category && t.category.toLowerCase().includes(searchLower));
+        const matchesSearch =
+            t.description.toLowerCase().includes(searchLower) ||
+            (t.category && t.category.toLowerCase().includes(searchLower));
+
         return matchesFilter && matchesSearch;
     });
 
@@ -703,13 +733,15 @@ function renderTransactionList() {
 
     filtered.forEach(t => {
         const li = document.createElement('li');
-        li.className = t.amount > 0 ? 'income' : 'expense';
+        li.className = t.type === 'income' ? 'income' : t.type === 'expense' ? 'expense' : 'transfer';
+
         const account = accounts.find(acc => acc.id === t.accountId);
         const accountName = account ? account.name : 'Unknown';
+
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
-                <div class="transaction-meta">${t.category} • ${accountName} • ${new Date(t.date).toLocaleDateString()}</div>
+                <div class="transaction-meta">${t.category} • ${accountName} • ${safeFormatDate(t.date)}</div>
             </div>
             <span class="transaction-amount ${getAmountClass(t.amount)}">
                 ${formatCurrencyWithColor(t.amount)}
@@ -732,17 +764,20 @@ function renderTransactionPreview() {
     const list = document.getElementById('transaction-list-preview');
     list.innerHTML = '';
     const recent = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
     if (recent.length === 0) {
         list.innerHTML = `<li><div class="empty-state">No transactions yet.</div></li>`;
         return;
     }
+
     recent.forEach(t => {
         const li = document.createElement('li');
-        li.className = t.amount > 0 ? 'income' : 'expense';
+        li.className = t.type === 'income' ? 'income' : t.type === 'expense' ? 'expense' : 'transfer';
+
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
-                <div class="transaction-meta">${t.category} • ${new Date(t.date).toLocaleDateString()}</div>
+                <div class="transaction-meta">${t.category} • ${safeFormatDate(t.date)}</div>
             </div>
             <span class="transaction-amount ${getAmountClass(t.amount)}">
                 ${formatCurrencyWithColor(t.amount)}
@@ -1250,6 +1285,19 @@ function restoreData(file) {
     };
     reader.readAsText(file);
 }
+function migrateTransactionTypes() {
+    transactions.forEach(t => {
+        if (!t.type) {
+            if (t.category === 'Transfer' || t.description.startsWith('Transfer ')) {
+                t.type = 'transfer';
+                t.transferGroupId = t.transferGroupId || `legacy-${t.id}`;
+            } else {
+                t.type = t.amount > 0 ? 'income' : 'expense';
+            }
+        }
+    });
+    saveTransactions();
+}
 function checkForDateChange() {
     const now = new Date();
     const todayString = now.toDateString();
@@ -1309,6 +1357,22 @@ const PALETTES = [
     { id: 'cherry', name: 'Cherry', swatch: '#e11d48' },
     { id: 'slate', name: 'Slate', swatch: '#64748b' }
 ];
+function getMonthKeyFromTransaction(t) {
+    if (!t || !t.date) return null;
+    const d = new Date(t.date);
+    return isNaN(d.getTime()) ? null : getMonthKeyFromDate(d);
+}
+
+function getDayKeyFromTransaction(t) {
+    if (!t || !t.date) return null;
+    const d = new Date(t.date);
+    return isNaN(d.getTime()) ? null : getDayKeyFromDate(d);
+}
+
+function safeFormatDate(dateString) {
+    const d = new Date(dateString);
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+}
 
 function generatePaletteButtons() {
     const container = document.getElementById('palette-grid');
@@ -1550,6 +1614,5 @@ function initialize() {
     // Check bill reminders on load
     updateBillBadge();
 }
-
 
 initialize();
