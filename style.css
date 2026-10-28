@@ -1325,3 +1325,32 @@ button {
         transition-duration: 0.01ms !important;
     }
 }
+/* ================= ACCOUNT LOGOS ================= */
+.account-logo {
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Ensure alignment in lists */
+.account-item > div:first-child,
+.account-summary-item > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.transaction-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.transaction-meta span.logo-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}

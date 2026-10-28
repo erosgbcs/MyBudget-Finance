@@ -21,11 +21,9 @@ let density = localStorage.getItem('mb_density') || 'comfortable';
 let notificationsEnabled = localStorage.getItem('mb_notifications') === 'true';
 let lastKnownDate = new Date().toDateString();
 
-// Navigation & Modal States
 let activeTab = 'home';
-let currentFormType = null; // 'account', 'savings', 'loan', 'bill', 'budget'
+let currentFormType = null;
 
-// Chart.js instances
 let incomeExpenseChartInstance = null;
 let categoryPieChartInstance = null;
 let netWorthChartInstance = null;
@@ -64,6 +62,25 @@ function formatCurrencyWithColor(val) {
     const formatted = formatCurrency(val);
     const sign = val > 0 ? '+' : (val < 0 ? '-' : '');
     return `<span class="${cls}">${sign}${formatted}</span>`;
+}
+
+// ---------- Account Logos ----------
+function getAccountLogo(name, size = 36) {
+    const n = (name || '').toLowerCase();
+    
+    if (n.includes('gcash')) {
+        return `<svg class="account-logo" style="width:${size}px; height:${size}px;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#007DFE"/><path d="M12 6a6 6 0 1 0 0 12 6 6 0 0 0 5.2-3H12v-2h6.9A6.1 6.1 0 0 0 12 6z" fill="white"/></svg>`;
+    }
+    
+    if (n.includes('maribank')) {
+        return `<svg class="account-logo" style="width:${size}px; height:${size}px;" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="12" fill="#0056C6"/><path d="M7 15V9l5 3 5-3v6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+    
+    if (n.includes('cash')) {
+        return `<svg class="account-logo" style="width:${size}px; height:${size}px;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#34C759"/><path d="M12 6v12M15 9H10.5a2.5 2.5 0 0 0 0 5h3a2.5 2.5 0 0 1 0 5H9" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`;
+    }
+    
+    return `<svg class="account-logo" style="width:${size}px; height:${size}px;" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#8E8E93"/><path d="M4 8h16v10H4z" stroke="white" stroke-width="2" stroke-linejoin="round"/><path d="M4 12h16" stroke="white" stroke-width="2"/></svg>`;
 }
 
 function getChartColors() {
@@ -169,34 +186,15 @@ function applyTheme() {
     const densitySelect = document.getElementById('density-select');
     if (densitySelect) densitySelect.value = density;
     const notifBtn = document.getElementById('enable-notifications-btn');
-    if (notifBtn) {
-        notifBtn.textContent = notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications';
-    }
+    if (notifBtn) notifBtn.textContent = notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications';
+    
     const notifStatus = document.getElementById('notification-status');
-    if (notifStatus) {
-        notifStatus.textContent = notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled';
-    }
+    if (notifStatus) notifStatus.textContent = notificationsEnabled ? 'Notifications enabled' : 'Notifications disabled';
 }
 
-function setPalette(palette) {
-    currentPalette = palette;
-    savePalette();
-    applyTheme();
-}
-
-function setFontSize(size) {
-    if (!['small', 'medium', 'large'].includes(size)) return;
-    fontSize = size;
-    saveFontSize();
-    applyTheme();
-}
-
-function setDensity(densityVal) {
-    if (!['comfortable', 'compact'].includes(densityVal)) return;
-    density = densityVal;
-    saveDensity();
-    applyTheme();
-}
+function setPalette(palette) { currentPalette = palette; savePalette(); applyTheme(); }
+function setFontSize(size) { if (!['small', 'medium', 'large'].includes(size)) return; fontSize = size; saveFontSize(); applyTheme(); }
+function setDensity(densityVal) { if (!['comfortable', 'compact'].includes(densityVal)) return; density = densityVal; saveDensity(); applyTheme(); }
 
 // ---------- Navigation ----------
 const tabTitles = {
@@ -209,34 +207,18 @@ const addPages = ['accounts', 'savings', 'loans', 'bills', 'budget'];
 function switchTab(tabId, activeNav = tabId) {
     activeTab = tabId;
     
-    // Update Tab Content visibility
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     const targetTab = document.getElementById('tab-' + tabId);
     if (targetTab) targetTab.classList.add('active');
 
-    // Update Bottom Nav active state
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     const activeNavItem = document.querySelector(`.nav-item[data-tab="${activeNav}"]`);
     if (activeNavItem) activeNavItem.classList.add('active');
 
-    // Update Header UI
     document.getElementById('page-title').textContent = tabTitles[tabId] || 'MyBudget';
-    
-    const backBtn = document.getElementById('back-btn');
-    if (subPages.includes(tabId)) {
-        backBtn.style.display = 'flex';
-    } else {
-        backBtn.style.display = 'none';
-    }
+    document.getElementById('back-btn').style.display = subPages.includes(tabId) ? 'flex' : 'none';
+    document.getElementById('header-add-btn').style.display = addPages.includes(tabId) ? 'flex' : 'none';
 
-    const headerAddBtn = document.getElementById('header-add-btn');
-    if (addPages.includes(tabId)) {
-        headerAddBtn.style.display = 'flex';
-    } else {
-        headerAddBtn.style.display = 'none';
-    }
-
-    // Lazy Render Charts
     if (tabId === 'charts') setTimeout(() => renderCharts(), 100);
     if (tabId === 'budget') setTimeout(() => renderBudgetChart(), 100);
 }
@@ -251,7 +233,7 @@ function openFormModal(type) {
 
     if (type === 'account') {
         titleEl.textContent = 'Add Account';
-        fieldsEl.innerHTML = `<input type="text" id="gf-name" placeholder="Account Name" required>`;
+        fieldsEl.innerHTML = `<input type="text" id="gf-name" placeholder="Account Name (e.g. GCash, BPI)" required>`;
     } 
     else if (type === 'savings') {
         titleEl.textContent = 'Add Savings Goal';
@@ -307,88 +289,17 @@ function closeFormModal() {
 }
 
 // ---------- Operations ----------
-function addAccount(name) {
-    accounts.push({ id: 'acc' + Date.now(), name, balance: 0 });
-    saveAccounts();
-    renderAll();
-    showToast('Account added', 'success');
-}
-
-function deleteAccount(id) {
-    if (accounts.length <= 1) return alert('Cannot delete the last account');
-    accounts = accounts.filter(acc => acc.id !== id);
-    saveAccounts();
-    renderAll();
-}
-
-function addSavingsGoal(name, target, current, accountId) {
-    savings.push({
-        id: 'sav' + Date.now(), name, target, current, accountId,
-        createdAt: new Date().toISOString(), initialAmount: current || 0
-    });
-    saveSavings();
-    renderAll();
-    showToast('Savings goal added', 'success');
-}
-
-function updateSavings(id, newCurrent) {
-    const goal = savings.find(s => s.id === id);
-    if (goal) {
-        goal.current = Math.max(0, newCurrent);
-        saveSavings();
-        renderAll();
-    }
-}
-
-function deleteSavingsGoal(id) {
-    savings = savings.filter(s => s.id !== id);
-    saveSavings();
-    renderAll();
-}
-
-function addLoan(name, amount, type) {
-    loans.push({ id: 'loan' + Date.now(), name, amount, type });
-    saveLoans();
-    renderAll();
-    showToast('Loan added', 'success');
-}
-
-function deleteLoan(id) {
-    loans = loans.filter(l => l.id !== id);
-    saveLoans();
-    renderAll();
-}
-
-function addBill(name, amount, dueDate) {
-    bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false });
-    saveBills();
-    renderAll();
-    showToast('Bill added', 'success');
-}
-
-function deleteBill(id) {
-    bills = bills.filter(b => b.id !== id);
-    saveBills();
-    renderAll();
-}
-
-function toggleBillPaid(id) {
-    const bill = bills.find(b => b.id === id);
-    if (bill) {
-        bill.paid = !bill.paid;
-        saveBills();
-        renderAll();
-    }
-}
-
-function setBudget(category, limit) {
-    const monthKey = getMonthKey();
-    if (!budgets[monthKey]) budgets[monthKey] = {};
-    budgets[monthKey][category] = limit;
-    saveBudgets();
-    renderAll();
-    showToast('Budget set', 'success');
-}
+function addAccount(name) { accounts.push({ id: 'acc' + Date.now(), name, balance: 0 }); saveAccounts(); renderAll(); showToast('Account added', 'success'); }
+function deleteAccount(id) { if (accounts.length <= 1) return alert('Cannot delete the last account'); accounts = accounts.filter(acc => acc.id !== id); saveAccounts(); renderAll(); }
+function addSavingsGoal(name, target, current, accountId) { savings.push({ id: 'sav' + Date.now(), name, target, current, accountId, createdAt: new Date().toISOString(), initialAmount: current || 0 }); saveSavings(); renderAll(); showToast('Savings goal added', 'success'); }
+function updateSavings(id, newCurrent) { const goal = savings.find(s => s.id === id); if (goal) { goal.current = Math.max(0, newCurrent); saveSavings(); renderAll(); } }
+function deleteSavingsGoal(id) { savings = savings.filter(s => s.id !== id); saveSavings(); renderAll(); }
+function addLoan(name, amount, type) { loans.push({ id: 'loan' + Date.now(), name, amount, type }); saveLoans(); renderAll(); showToast('Loan added', 'success'); }
+function deleteLoan(id) { loans = loans.filter(l => l.id !== id); saveLoans(); renderAll(); }
+function addBill(name, amount, dueDate) { bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false }); saveBills(); renderAll(); showToast('Bill added', 'success'); }
+function deleteBill(id) { bills = bills.filter(b => b.id !== id); saveBills(); renderAll(); }
+function toggleBillPaid(id) { const bill = bills.find(b => b.id === id); if (bill) { bill.paid = !bill.paid; saveBills(); renderAll(); } }
+function setBudget(category, limit) { const monthKey = getMonthKey(); if (!budgets[monthKey]) budgets[monthKey] = {}; budgets[monthKey][category] = limit; saveBudgets(); renderAll(); showToast('Budget set', 'success'); }
 
 function addTransaction(description, amount, type, category, accountId, transferToAccountId = null) {
     if (type === 'transfer') {
@@ -417,17 +328,11 @@ function addTransaction(description, amount, type, category, accountId, transfer
         showToast('Transfer completed', 'success');
     } else {
         const signedAmount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
-        transactions.push({
-            id: Date.now(), type, description, amount: signedAmount,
-            category, accountId, date: new Date().toISOString()
-        });
-        
+        transactions.push({ id: Date.now(), type, description, amount: signedAmount, category, accountId, date: new Date().toISOString() });
         const account = accounts.find(acc => acc.id === accountId);
         if (account) account.balance += signedAmount;
-        
         saveTransactions(); saveAccounts(); renderAll();
         showToast('Transaction added', 'success');
-        
         if (type === 'expense') checkBudgetAlerts(category);
     }
 }
@@ -435,7 +340,6 @@ function addTransaction(description, amount, type, category, accountId, transfer
 function deleteTransaction(id) {
     const t = transactions.find(tx => tx.id === id);
     if (!t) return;
-
     if (t.transferGroupId) {
         transactions.filter(tx => tx.transferGroupId === t.transferGroupId).forEach(tx => {
             const acc = accounts.find(a => a.id === tx.accountId);
@@ -475,7 +379,6 @@ function checkBudgetAlerts(category) {
     if (!monthBudgets[category]) return;
     const limit = monthBudgets[category];
     const spent = getCategorySpending(getMonthKey())[category] || 0;
-    
     if (spent >= limit) showToast(`Budget exceeded for ${category}!`, 'warning');
     else if (spent >= 0.8 * limit) showToast(`Approaching budget for ${category}.`, 'warning');
 }
@@ -491,7 +394,6 @@ function recordNetWorthSnapshot() {
     const now = new Date();
     const val = getNetWorth();
     const last = netWorthHistory[netWorthHistory.length - 1];
-    
     if (last && now.getTime() - new Date(last.date).getTime() < 60000) {
         last.value = val; saveNetWorthHistory(); return;
     }
@@ -504,25 +406,25 @@ function recordNetWorthSnapshot() {
 function renderAccounts() {
     const container = document.getElementById('accounts-list');
     container.innerHTML = '';
-    if (!accounts.length) {
-        container.innerHTML = `<div class="empty-state">No accounts yet. Tap + to add.</div>`;
-        return;
-    }
+    if (!accounts.length) { container.innerHTML = `<div class="empty-state">No accounts yet. Tap + to add.</div>`; return; }
     accounts.forEach(acc => {
         const effBal = acc.balance + getSavingsTotalForAccount(acc.id);
         const savText = getSavingsTotalForAccount(acc.id) > 0 ? ` (Savings: ${formatCurrency(getSavingsTotalForAccount(acc.id))})` : '';
-        
         const div = document.createElement('div');
         div.className = 'account-item';
         div.innerHTML = `
-            <div><span class="account-name">${acc.name}</span>${savText ? `<div class="transaction-meta">${savText}</div>` : ''}</div>
+            <div>
+                ${getAccountLogo(acc.name, 36)}
+                <div style="min-width: 0;">
+                    <span class="account-name">${acc.name}</span>
+                    ${savText ? `<div class="transaction-meta">${savText}</div>` : ''}
+                </div>
+            </div>
             <span class="account-balance ${getAmountClass(effBal)}">${formatCurrency(effBal)}</span>
             <button class="delete-btn" onclick="deleteAccount('${acc.id}')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         `;
         container.appendChild(div);
     });
-    
-    // Repopulate Transaction Modal Account Selects
     const optHtml = accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
     if(document.getElementById('modal-account')) document.getElementById('modal-account').innerHTML = optHtml;
     if(document.getElementById('transfer-from-account')) document.getElementById('transfer-from-account').innerHTML = optHtml;
@@ -534,13 +436,15 @@ function renderAccountBalances() {
     if (!container) return;
     container.innerHTML = '';
     if (!accounts.length) { container.innerHTML = '<div class="empty-state">No accounts yet.</div>'; return; }
-    
     accounts.forEach(acc => {
         const effBal = acc.balance + getSavingsTotalForAccount(acc.id);
         const div = document.createElement('div');
         div.className = 'account-summary-item';
         div.innerHTML = `
-            <span class="account-summary-name">${acc.name}</span>
+            <div>
+                ${getAccountLogo(acc.name, 28)}
+                <span class="account-summary-name">${acc.name}</span>
+            </div>
             <span class="account-summary-balance ${getAmountClass(effBal)}">${formatCurrency(effBal)}</span>
         `;
         container.appendChild(div);
@@ -551,7 +455,6 @@ function renderSavings() {
     const container = document.getElementById('savings-list');
     container.innerHTML = '';
     if (!savings.length) { container.innerHTML = `<div class="empty-state">No savings goals yet. Tap + to add.</div>`; return; }
-    
     savings.forEach(goal => {
         const pct = goal.target > 0 ? Math.min(100, (goal.current / goal.target) * 100) : 0;
         const acc = accounts.find(a => a.id === goal.accountId);
@@ -561,7 +464,6 @@ function renderSavings() {
             const rate = (goal.current - goal.initialAmount) / months;
             if (rate > 0) proj = `<div class="transaction-meta">Projection: ~${Math.ceil((goal.target - goal.current) / rate)} months</div>`;
         }
-        
         const div = document.createElement('div');
         div.className = 'savings-item';
         div.innerHTML = `
@@ -582,7 +484,6 @@ function renderLoans() {
     const container = document.getElementById('loans-list');
     container.innerHTML = '';
     if (!loans.length) { container.innerHTML = `<div class="empty-state">No loans recorded. Tap + to add.</div>`; return; }
-    
     loans.forEach(loan => {
         const lbl = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
         const val = loan.type === 'borrowed' ? -loan.amount : loan.amount;
@@ -601,11 +502,9 @@ function renderBills() {
     const container = document.getElementById('bills-list');
     container.innerHTML = '';
     if (!bills.length) { container.innerHTML = `<div class="empty-state">No upcoming bills. Tap + to add.</div>`; return; }
-    
     [...bills].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).forEach(bill => {
         const due = new Date(bill.dueDate + 'T00:00:00');
         const isPast = due < new Date() && !bill.paid;
-        
         const div = document.createElement('div');
         div.className = 'bill-item';
         div.innerHTML = `
@@ -629,7 +528,6 @@ function renderSummary() {
     document.getElementById('balance').innerHTML = formatCurrencyWithColor(totalBal);
     document.getElementById('total-income').innerHTML = formatCurrencyWithColor(income);
     document.getElementById('total-expense').innerHTML = formatCurrencyWithColor(-expense);
-    
     const nw = getNetWorth();
     document.getElementById('net-worth').innerHTML = formatCurrencyWithColor(nw);
     const lent = loans.filter(l => l.type === 'lent').reduce((s, l) => s + l.amount, 0);
@@ -640,24 +538,26 @@ function renderSummary() {
 function renderTransactionList() {
     const list = document.getElementById('transaction-list');
     list.innerHTML = '';
-    
     const filtered = transactions.filter(t => {
         const matchF = currentFilter === 'all' || (currentFilter === 'income' && t.type === 'income') || (currentFilter === 'expense' && t.type === 'expense');
         const q = searchQuery.toLowerCase();
         const matchS = t.description.toLowerCase().includes(q) || (t.category && t.category.toLowerCase().includes(q));
         return matchF && matchS;
     });
-
     if (!filtered.length) { list.innerHTML = `<li><div class="empty-state">No transactions found.</div></li>`; return; }
-
     filtered.forEach(t => {
         const li = document.createElement('li');
         li.className = t.type;
         const acc = accounts.find(a => a.id === t.accountId);
+        const accName = acc ? acc.name : 'Unknown';
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
-                <div class="transaction-meta">${t.category} • ${acc ? acc.name : 'Unknown'} • ${safeFormatDate(t.date)}</div>
+                <div class="transaction-meta">
+                    ${t.category} • 
+                    <span class="logo-wrap">${getAccountLogo(accName, 14)} ${accName}</span> • 
+                    ${safeFormatDate(t.date)}
+                </div>
             </div>
             <span class="transaction-amount ${getAmountClass(t.amount)}">${formatCurrencyWithColor(t.amount)}</span>
             <button class="delete-btn" onclick="deleteTransaction(${t.id})"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
@@ -671,14 +571,19 @@ function renderTransactionPreview() {
     list.innerHTML = '';
     const recent = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
     if (!recent.length) { list.innerHTML = `<li><div class="empty-state">No transactions yet.</div></li>`; return; }
-    
     recent.forEach(t => {
         const li = document.createElement('li');
         li.className = t.type;
+        const acc = accounts.find(a => a.id === t.accountId);
+        const accName = acc ? acc.name : 'Unknown';
         li.innerHTML = `
             <div class="transaction-info">
                 <div class="transaction-desc">${t.description}</div>
-                <div class="transaction-meta">${t.category} • ${safeFormatDate(t.date)}</div>
+                <div class="transaction-meta">
+                    ${t.category} • 
+                    <span class="logo-wrap">${getAccountLogo(accName, 14)} ${accName}</span> • 
+                    ${safeFormatDate(t.date)}
+                </div>
             </div>
             <span class="transaction-amount ${getAmountClass(t.amount)}">${formatCurrencyWithColor(t.amount)}</span>
         `;
@@ -691,10 +596,8 @@ function renderBudgets() {
     const spend = getCategorySpending(mk);
     const container = document.getElementById('budget-progress');
     container.innerHTML = '';
-    
     const b = budgets[mk] || {};
     if (!Object.keys(b).length) { container.innerHTML = `<div class="empty-state">No budgets set for this month. Tap + to add.</div>`; return; }
-    
     Object.keys(b).forEach(cat => {
         const lim = b[cat], sp = spend[cat] || 0, pct = lim > 0 ? (sp / lim) * 100 : 0;
         const over = pct >= 100, warn = pct >= 80 && pct < 100;
@@ -799,10 +702,8 @@ function renderBudgetChart() {
     if (!canvas) return;
     const b = budgets[getMonthKey()] || {};
     if (!Object.keys(b).length) return;
-    
     const sp = getCategorySpending(getMonthKey());
     const c = getChartColors();
-    
     budgetChartInstance = new Chart(canvas.getContext('2d'), {
         type: 'bar',
         data: { labels: Object.keys(b), datasets: [
@@ -813,7 +714,6 @@ function renderBudgetChart() {
     });
 }
 
-// ---------- Unified Render ----------
 function renderAll() {
     renderAccounts();
     renderAccountBalances();
@@ -826,18 +726,15 @@ function renderAll() {
     renderBudgets();
     recordNetWorthSnapshot();
     updateBillBadge();
-
     if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
     if (document.getElementById('tab-budget').classList.contains('active')) renderBudgetChart();
 }
 
-// ---------- Bill Badge ----------
 function updateBillBadge() {
     const today = new Date(), future = new Date(today);
     future.setDate(today.getDate() + 3);
     const upcoming = bills.filter(b => !b.paid && new Date(b.dueDate + 'T00:00:00') >= today && new Date(b.dueDate + 'T00:00:00') <= future);
     const badge = document.getElementById('more-badge');
-    
     if (badge) {
         if (upcoming.length > 0) {
             badge.textContent = upcoming.length;
@@ -853,10 +750,7 @@ function updateBillBadge() {
 
 // ---------- Backup & Restore ----------
 function backupData() {
-    const data = {
-        accounts, transactions, budgets, savings, loans, bills, netWorthHistory,
-        settings: { isDarkMode, transparency, currentPalette, fontSize, density, notificationsEnabled }
-    };
+    const data = { accounts, transactions, budgets, savings, loans, bills, netWorthHistory, settings: { isDarkMode, transparency, currentPalette, fontSize, density, notificationsEnabled } };
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     a.download = `mybudget-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -870,11 +764,9 @@ function restoreData(file) {
         try {
             const data = JSON.parse(e.target.result);
             if (!data.accounts || !data.transactions || !confirm('Overwrite current data?')) return;
-            
             accounts = data.accounts; transactions = data.transactions;
             budgets = data.budgets || {}; savings = data.savings; loans = data.loans;
             bills = data.bills; netWorthHistory = data.netWorthHistory || [];
-            
             if (data.settings) {
                 isDarkMode = data.settings.isDarkMode || false;
                 transparency = data.settings.transparency || 0.65;
@@ -883,10 +775,8 @@ function restoreData(file) {
                 density = data.settings.density || 'comfortable';
                 notificationsEnabled = data.settings.notificationsEnabled || false;
             }
-            
             saveAccounts(); saveTransactions(); saveBudgets(); saveSavings(); saveLoans(); saveBills(); saveNetWorthHistory();
             saveTheme(); saveTransparency(); savePalette(); saveFontSize(); saveDensity(); saveNotifications();
-            
             applyTheme(); renderAll();
             showToast('Data restored!', 'success');
         } catch (err) { alert('Error restoring: ' + err.message); }
@@ -928,12 +818,7 @@ const PALETTES = [
 function generatePaletteButtons() {
     const container = document.getElementById('palette-grid');
     if (!container) return;
-    container.innerHTML = PALETTES.map(p => `
-        <button class="palette-btn" data-palette="${p.id}">
-            <span class="palette-swatch" style="background: ${p.swatch};"></span>${p.name}
-        </button>
-    `).join('');
-    
+    container.innerHTML = PALETTES.map(p => `<button class="palette-btn" data-palette="${p.id}"><span class="palette-swatch" style="background: ${p.swatch};"></span>${p.name}</button>`).join('');
     container.querySelectorAll('.palette-btn').forEach(btn => {
         btn.addEventListener('click', () => setPalette(btn.dataset.palette));
     });
@@ -941,24 +826,15 @@ function generatePaletteButtons() {
 
 // ---------- Event Listeners ----------
 document.getElementById('theme-toggle').addEventListener('click', () => {
-    isDarkMode = !isDarkMode;
-    saveTheme(); applyTheme();
+    isDarkMode = !isDarkMode; saveTheme(); applyTheme();
     if (activeTab === 'charts') setTimeout(renderCharts, 50);
     if (activeTab === 'budget') setTimeout(renderBudgetChart, 50);
 });
 
-// Navigation
-document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => switchTab(item.dataset.tab, item.dataset.tab));
-});
-
-document.querySelectorAll('.more-item').forEach(item => {
-    item.addEventListener('click', () => switchTab(item.dataset.tabTarget, 'more'));
-});
-
+document.querySelectorAll('.nav-item').forEach(item => { item.addEventListener('click', () => switchTab(item.dataset.tab, item.dataset.tab)); });
+document.querySelectorAll('.more-item').forEach(item => { item.addEventListener('click', () => switchTab(item.dataset.tabTarget, 'more')); });
 document.getElementById('back-btn').addEventListener('click', () => switchTab('more', 'more'));
 
-// Contextual Header Add Button
 document.getElementById('header-add-btn').addEventListener('click', () => {
     if (activeTab === 'transactions') openTransactionModal();
     else if (activeTab === 'accounts') openFormModal('account');
@@ -968,7 +844,6 @@ document.getElementById('header-add-btn').addEventListener('click', () => {
     else if (activeTab === 'budget') openFormModal('budget');
 });
 
-// Transaction Modal Actions
 document.getElementById('fab-add-transaction').addEventListener('click', openTransactionModal);
 document.getElementById('open-modal-btn').addEventListener('click', openTransactionModal);
 document.getElementById('close-modal').addEventListener('click', closeTransactionModal);
@@ -981,7 +856,6 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     const amount = parseFloat(document.getElementById('modal-amount').value);
     const type = document.getElementById('modal-type').value;
     if (!desc || isNaN(amount) || amount <= 0) return alert('Valid description and amount required.');
-
     if (type === 'transfer') {
         const from = document.getElementById('transfer-from-account').value;
         const to = document.getElementById('transfer-to-account').value;
@@ -993,27 +867,18 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     closeTransactionModal();
 });
 
-// Unified Form Modal Actions
 document.getElementById('close-form-modal').addEventListener('click', closeFormModal);
 document.getElementById('form-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('form-modal')) closeFormModal(); });
-
 document.getElementById('generic-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    if (currentFormType === 'account') {
-        addAccount(document.getElementById('gf-name').value.trim());
-    } else if (currentFormType === 'savings') {
-        addSavingsGoal(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-target').value), parseFloat(document.getElementById('gf-current').value) || 0, document.getElementById('gf-account').value);
-    } else if (currentFormType === 'loan') {
-        addLoan(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-type').value);
-    } else if (currentFormType === 'bill') {
-        addBill(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-due-date').value);
-    } else if (currentFormType === 'budget') {
-        setBudget(document.getElementById('gf-category').value, parseFloat(document.getElementById('gf-amount').value));
-    }
+    if (currentFormType === 'account') addAccount(document.getElementById('gf-name').value.trim());
+    else if (currentFormType === 'savings') addSavingsGoal(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-target').value), parseFloat(document.getElementById('gf-current').value) || 0, document.getElementById('gf-account').value);
+    else if (currentFormType === 'loan') addLoan(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-type').value);
+    else if (currentFormType === 'bill') addBill(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-due-date').value);
+    else if (currentFormType === 'budget') setBudget(document.getElementById('gf-category').value, parseFloat(document.getElementById('gf-amount').value));
     closeFormModal();
 });
 
-// Search & Filters
 document.getElementById('search-transactions').addEventListener('input', (e) => { searchQuery = e.target.value; renderTransactionList(); });
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1022,7 +887,6 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-// Settings
 document.getElementById('font-size-select').addEventListener('change', (e) => setFontSize(e.target.value));
 document.getElementById('density-select').addEventListener('change', (e) => setDensity(e.target.value));
 document.getElementById('enable-notifications-btn').addEventListener('click', async () => {
@@ -1039,22 +903,31 @@ document.getElementById('backup-data-btn').addEventListener('click', backupData)
 document.getElementById('restore-data-btn').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', (e) => { if (e.target.files[0]) restoreData(e.target.files[0]); e.target.value = ''; });
 
-// Date Change Checker
-setInterval(() => {
-    const now = new Date().toDateString();
-    if (now !== lastKnownDate) { lastKnownDate = now; renderAll(); }
-}, 60000);
+setInterval(() => { const now = new Date().toDateString(); if (now !== lastKnownDate) { lastKnownDate = now; renderAll(); } }, 60000);
 
-// ---------- Initialize ----------
+// ---------- Offline/Online Listeners ----------
+window.addEventListener('online', () => showToast('You are back online', 'success'));
+window.addEventListener('offline', () => showToast('You are offline. App will continue to work.', 'warning'));
+
+// ---------- Initialize & Service Worker ----------
 function initialize() {
     generatePaletteButtons();
     applyTheme();
     renderAll();
-    switchTab('home', 'home'); // Set default UI state
+    switchTab('home', 'home');
     
     if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
     if (document.getElementById('tab-budget').classList.contains('active')) renderBudgetChart();
     updateBillBadge();
+
+    // Register Service Worker for offline caching
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker error:', err));
+        });
+    }
 }
 
 initialize();
