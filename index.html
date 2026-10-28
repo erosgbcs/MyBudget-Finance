@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MyBudget</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#3B82F6">
+    <!-- iOS system blue -->
+    <meta name="theme-color" content="#007AFF">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,11 +18,24 @@
 </head>
 <body>
     <div class="container">
+        <!-- DYNAMIC STICKY HEADER -->
         <header>
-            <h1>MyBudget</h1>
-            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-                <!-- Sun and Moon SVGs will be inserted by JS -->
-            </button>
+            <div class="header-left">
+                <button id="back-btn" class="header-icon-btn" style="display: none;" aria-label="Go back">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <h1 id="page-title">MyBudget</h1>
+            </div>
+            <div class="header-right">
+                <!-- Contextual Add Button (Hidden by default, shown via JS) -->
+                <button id="header-add-btn" class="header-icon-btn" style="display: none;" aria-label="Add item">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <!-- Sun and Moon SVGs will be inserted by JS -->
+                </button>
+            </div>
         </header>
 
         <!-- HOME TAB -->
@@ -65,6 +79,7 @@
             <div class="section glass">
                 <div class="section-header">
                     <h2>Transactions</h2>
+                    <!-- Kept inline button for direct access, though FAB also works -->
                     <button class="btn btn-small" id="open-modal-btn">+ Add</button>
                 </div>
                 <div class="search-container">
@@ -80,71 +95,54 @@
         </div>
 
         <!-- CHARTS TAB -->
-<div class="tab-content" id="tab-charts">
-    <!-- Income vs Expense -->
-    <div class="section glass">
-        <div class="section-header">
-            <h2>Income vs Expense</h2>
+        <div class="tab-content" id="tab-charts">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Income vs Expense</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="incomeExpenseChart"></canvas>
+                </div>
+            </div>
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Daily Income vs Expense</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="dailyIncomeExpenseChart"></canvas>
+                </div>
+            </div>
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Category Spending</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+            </div>
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Accounts Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="accountsDoughnutChart"></canvas>
+                </div>
+            </div>
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Net Worth History</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="netWorthChart"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="chart-container">
-            <canvas id="incomeExpenseChart"></canvas>
-        </div>
-    </div>
-
-
-<div class="section glass">
-    <div class="section-header">
-        <h2>Daily Income vs Expense</h2>
-    </div>
-    <div class="chart-container">
-        <canvas id="dailyIncomeExpenseChart"></canvas>
-    </div>
-</div>
-  
-    <!-- Category Spending -->
-    <div class="section glass">
-        <div class="section-header">
-            <h2>Category Spending</h2>
-        </div>
-        <div class="chart-container">
-            <canvas id="categoryPieChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Accounts Distribution -->
-    <div class="section glass">
-        <div class="section-header">
-            <h2>Accounts Distribution</h2>
-        </div>
-        <div class="chart-container">
-            <canvas id="accountsDoughnutChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Net Worth History -->
-    <div class="section glass">
-        <div class="section-header">
-            <h2>Net Worth History</h2>
-        </div>
-        <div class="chart-container">
-            <canvas id="netWorthChart"></canvas>
-        </div>
-    </div>
-</div>
 
         <!-- MORE TAB -->
         <div class="tab-content" id="tab-more">
             <div class="section glass">
-                <h2>More</h2>
-                <div class="theme-settings">
-                    <div class="section-header">
-                        <h3>UI Theme</h3>
-                    </div>
-                    <div class="theme-options">
-                        <button class="theme-option-btn active" data-theme-style="glass">Glassmorphism</button>
-                        <button class="theme-option-btn" data-theme-style="neumorphism">Neumorphism</button>
-                        <button class="theme-option-btn" data-theme-style="normal">Normal</button>
-                    </div>
+                <div class="section-header">
+                    <h2>More Options</h2>
                 </div>
                 <div class="more-grid">
                     <button class="more-item" data-tab-target="accounts">
@@ -175,18 +173,64 @@
             </div>
         </div>
 
+        <!-- ACCOUNTS TAB -->
+        <div class="tab-content" id="tab-accounts">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Your Accounts</h2>
+                </div>
+                <div id="accounts-list"></div>
+            </div>
+        </div>
+
+        <!-- SAVINGS TAB -->
+        <div class="tab-content" id="tab-savings">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Savings Goals</h2>
+                </div>
+                <div id="savings-list"></div>
+            </div>
+        </div>
+
+        <!-- LOANS TAB -->
+        <div class="tab-content" id="tab-loans">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Active Loans</h2>
+                </div>
+                <div id="loans-list"></div>
+            </div>
+        </div>
+
+        <!-- BILLS TAB -->
+        <div class="tab-content" id="tab-bills">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Upcoming Bills</h2>
+                </div>
+                <div id="bills-list"></div>
+            </div>
+        </div>
+
+        <!-- BUDGET TAB -->
+        <div class="tab-content" id="tab-budget">
+            <div class="section glass">
+                <div class="section-header">
+                    <h2>Monthly Budget</h2>
+                </div>
+                <div id="budget-progress"></div>
+                <div class="chart-container" style="height:250px; margin-top:20px;">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- SETTINGS TAB -->
         <div class="tab-content" id="tab-settings">
             <div class="section glass">
                 <div class="section-header">
-                    <h2>Settings</h2>
-                </div>
-
-                <!-- Transparency Slider -->
-                <div class="setting-group">
-                    <label for="transparency-slider">Glass Transparency</label>
-                    <input type="range" id="transparency-slider" min="0.1" max="0.9" step="0.05" value="0.25">
-                    <span id="transparency-value">0.25</span>
+                    <h2>Preferences</h2>
                 </div>
 
                 <!-- Color Palette Selection -->
@@ -195,7 +239,7 @@
                     <div class="palette-grid" id="palette-grid"></div>
                 </div>
 
-                <!-- New: Font Size & Density -->
+                <!-- Font Size & Density -->
                 <div class="setting-group">
                     <h3>Font Size</h3>
                     <select id="font-size-select">
@@ -218,97 +262,14 @@
                     <button id="enable-notifications-btn" class="btn">Enable Notifications</button>
                     <p id="notification-status" class="transaction-meta"></p>
                 </div>
-              <!-- Backup & Restore -->
-<div class="setting-group">
-    <h3>Backup & Restore Data</h3>
-    <button id="backup-data-btn" class="btn">📥 Download Backup</button>
-    <button id="restore-data-btn" class="btn" style="margin-top:8px;">📤 Restore Backup</button>
-    <input type="file" id="restore-file-input" accept=".json" style="display:none;">
-    <p id="backup-status" class="transaction-meta" style="margin-top:8px;"></p>
-</div>
-            </div>
-        </div>
 
-        <!-- ACCOUNTS TAB -->
-        <div class="tab-content" id="tab-accounts">
-            <div class="section glass">
-                <h2>Accounts</h2>
-                <div id="accounts-list"></div>
-                <div class="add-account">
-                    <input type="text" id="new-account-name" placeholder="New account name">
-                    <button id="add-account-btn" class="btn">+ Add Account</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- SAVINGS TAB -->
-        <div class="tab-content" id="tab-savings">
-            <div class="section glass">
-                <h2>Savings Goals</h2>
-                <div class="row">
-                    <input type="text" id="savings-name" placeholder="Goal name">
-                    <input type="number" id="savings-target" placeholder="Target amount" step="0.01">
-                    <input type="number" id="savings-current" placeholder="Already saved" step="0.01">
-                    <select id="savings-account"></select>
-                    <button id="add-savings-btn" class="btn">+ Add Goal</button>
-                </div>
-                <div id="savings-list"></div>
-            </div>
-        </div>
-
-        <!-- LOANS TAB -->
-        <div class="tab-content" id="tab-loans">
-            <div class="section glass">
-                <h2>Loans</h2>
-                <div class="row">
-                    <input type="text" id="loan-name" placeholder="Loan description">
-                    <input type="number" id="loan-amount" placeholder="Amount" step="0.01">
-                    <select id="loan-type">
-                        <option value="borrowed">I Owe (Borrowed)</option>
-                        <option value="lent">Owed to Me (Lent)</option>
-                    </select>
-                    <button id="add-loan-btn" class="btn">+ Add Loan</button>
-                </div>
-                <div id="loans-list"></div>
-            </div>
-        </div>
-
-        <!-- BILLS TAB -->
-        <div class="tab-content" id="tab-bills">
-            <div class="section glass">
-                <h2>Upcoming Bills</h2>
-                <div class="row">
-                    <input type="text" id="bill-name" placeholder="Bill description">
-                    <input type="number" id="bill-amount" placeholder="Amount" step="0.01">
-                    <input type="date" id="bill-due-date">
-                    <button id="add-bill-btn" class="btn">+ Add Bill</button>
-                </div>
-                <div id="bills-list"></div>
-            </div>
-        </div>
-
-        <!-- BUDGET TAB -->
-        <div class="tab-content" id="tab-budget">
-            <div class="section glass">
-                <h2>Monthly Budget Allocation</h2>
-                <p>Set budgets for expense categories (current month)</p>
-                <div class="row">
-                    <select id="budget-category">
-                        <option value="Food">Food</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Bills">Bills</option>
-                        <option value="Entertainment">Entertainment</option>
-                        <option value="Health">Health</option>
-                        <option value="Other">Other</option>
-                    </select>
-                    <input type="number" id="budget-amount" placeholder="Budget limit" step="0.01">
-                    <button id="set-budget-btn" class="btn">Set</button>
-                </div>
-                <div id="budget-progress"></div>
-                <!-- New: Budget vs Actual Chart -->
-                <div class="chart-container" style="height:250px; margin-top:20px;">
-                    <canvas id="budgetChart"></canvas>
+                <!-- Backup & Restore -->
+                <div class="setting-group">
+                    <h3>Data Management</h3>
+                    <button id="backup-data-btn" class="btn">📥 Download Backup</button>
+                    <button id="restore-data-btn" class="btn" style="margin-top:8px;">📤 Restore Backup</button>
+                    <input type="file" id="restore-file-input" accept=".json" style="display:none;">
+                    <p id="backup-status" class="transaction-meta" style="margin-top:8px;"></p>
                 </div>
             </div>
         </div>
@@ -337,7 +298,7 @@
             </button>
         </nav>
 
-        <!-- Transaction Modal -->
+        <!-- TRANSACTION MODAL -->
         <div id="transaction-modal" class="modal-overlay">
             <div class="modal glass">
                 <div class="modal-header">
@@ -367,19 +328,35 @@
                             <option value="Other">Other</option>
                         </select>
                     </div>
-                    <!-- Regular Account Select (for expense/income) -->
                     <select id="modal-account"></select>
-                    <!-- Transfer Account Selects (hidden by default) -->
                     <div id="transfer-fields" style="display:none;">
-                        <label>From Account</label>
+                        <label style="display:block; margin-bottom:6px; font-size:13px; color:var(--text-secondary);">From Account</label>
                         <select id="transfer-from-account"></select>
-                        <label>To Account</label>
+                        <label style="display:block; margin:8px 0 6px; font-size:13px; color:var(--text-secondary);">To Account</label>
                         <select id="transfer-to-account"></select>
                     </div>
                     <button type="submit" class="btn">Add Transaction</button>
                 </form>
             </div>
         </div>
+
+        <!-- UNIFIED FORM MODAL (Used for Accounts, Savings, Loans, Bills, Budget) -->
+        <div id="form-modal" class="modal-overlay">
+            <div class="modal glass">
+                <div class="modal-header">
+                    <h2 id="form-modal-title">Add Item</h2>
+                    <button class="modal-close" id="close-form-modal" aria-label="Close">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <form id="generic-form">
+                    <!-- Dynamic form fields will be injected here by JS based on current tab -->
+                    <div id="form-fields"></div>
+                    <button type="submit" class="btn" id="form-submit-btn">Save</button>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <script src="app.js"></script>
