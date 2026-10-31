@@ -46,7 +46,7 @@ async function callGroq(prompt) {
   return data.choices?.[0]?.message?.content || '';
 }
 
-app.post('/ai', async (req, res) => {
+app.post('/api/ai', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
 
