@@ -1,5 +1,5 @@
 // ai-service.js
-const AI_PROXY_URL = 'http://localhost:3001/api/ai'; // Change to Render URL later!
+const AI_PROXY_URL = 'https://mybudget-proxy-xyz.vercel.app/api/ai';
 
 async function askAI(prompt) {
   const res = await fetch(AI_PROXY_URL, {
