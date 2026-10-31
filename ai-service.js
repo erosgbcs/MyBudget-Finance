@@ -1,5 +1,5 @@
 // ai-service.js
-const AI_PROXY_URL = 'https://mybudget-gzf8l1i52-innova-tech4.vercel.app/api/ai';
+const AI_PROXY_URL = 'https://mybudget-lilac.vercel.app/api/ai';
 
 async function askAI(prompt) {
   const res = await fetch(AI_PROXY_URL, {
