@@ -294,8 +294,17 @@ function deleteAccount(id) { if (accounts.length <= 1) return alert('Cannot dele
 function addSavingsGoal(name, target, current, accountId) { savings.push({ id: 'sav' + Date.now(), name, target, current, accountId, createdAt: new Date().toISOString(), initialAmount: current || 0 }); saveSavings(); renderAll(); showToast('Savings goal added', 'success'); }
 function updateSavings(id, newCurrent) { const goal = savings.find(s => s.id === id); if (goal) { goal.current = Math.max(0, newCurrent); saveSavings(); renderAll(); } }
 function deleteSavingsGoal(id) { savings = savings.filter(s => s.id !== id); saveSavings(); renderAll(); }
-function addLoan(name, amount, type) { loans.push({ id: 'loan' + Date.now(), name, amount, type }); saveLoans(); renderAll(); showToast('Loan added', 'success'); }
+function addLoan(name, amount, type) { loans.push({ id: 'loan' + Date.now(), name, amount, type, paid: 0 }); saveLoans(); renderAll(); showToast('Loan added', 'success'); }
 function deleteLoan(id) { loans = loans.filter(l => l.id !== id); saveLoans(); renderAll(); }
+function updateLoanPaid(id, newPaid) {
+    const loan = loans.find(l => l.id === id);
+    if (!loan) return;
+    const val = parseFloat(newPaid);
+    if (isNaN(val)) return;
+    loan.paid = Math.max(0, Math.min(loan.amount, val));
+    saveLoans();
+    renderAll();
+}
 function addBill(name, amount, dueDate) { bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false }); saveBills(); renderAll(); showToast('Bill added', 'success'); }
 function deleteBill(id) { bills = bills.filter(b => b.id !== id); saveBills(); renderAll(); }
 function toggleBillPaid(id) { const bill = bills.find(b => b.id === id); if (bill) { bill.paid = !bill.paid; saveBills(); renderAll(); } }
@@ -385,8 +394,8 @@ function checkBudgetAlerts(category) {
 
 function getNetWorth() {
     const accountTotal = accounts.reduce((sum, acc) => sum + acc.balance + getSavingsTotalForAccount(acc.id), 0);
-    const lent = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + l.amount, 0);
-    const borrowed = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + l.amount, 0);
+    const lent = loans.filter(l => l.type === 'lent').reduce((sum, l) => sum + Math.max(0, l.amount - (l.paid || 0)), 0);
+    const borrowed = loans.filter(l => l.type === 'borrowed').reduce((sum, l) => sum + Math.max(0, l.amount - (l.paid || 0)), 0);
     return accountTotal + lent - borrowed;
 }
 
@@ -486,12 +495,20 @@ function renderLoans() {
     if (!loans.length) { container.innerHTML = `<div class="empty-state">No loans recorded. Tap + to add.</div>`; return; }
     loans.forEach(loan => {
         const lbl = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
-        const val = loan.type === 'borrowed' ? -loan.amount : loan.amount;
+        const paid = loan.paid || 0;
+        const remaining = Math.max(0, loan.amount - paid);
+        const pct = loan.amount > 0 ? Math.min(100, (paid / loan.amount) * 100) : 0;
+        const isComplete = loan.amount > 0 && paid >= loan.amount;
         const div = document.createElement('div');
         div.className = 'loan-item';
         div.innerHTML = `
-            <span class="loan-name">${loan.name} <small>(${lbl})</small></span>
-            <span class="loan-amount ${getAmountClass(val)}">${formatCurrency(loan.amount)}</span>
+            <div style="flex:1;">
+                <div class="loan-name">${loan.name} <small>(${lbl})</small></div>
+                <div class="savings-progress"><span class="positive">${formatCurrency(paid)}</span> / ${formatCurrency(loan.amount)} ${isComplete ? '✓ Settled' : 'paid'}</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; ${isComplete ? 'background: var(--income-color);' : ''}"></div></div>
+                <div class="transaction-meta">Remaining: ${formatCurrency(remaining)}</div>
+            </div>
+            <input type="number" class="savings-update" value="${paid}" step="0.01" min="0" max="${loan.amount}" onchange="updateLoanPaid('${loan.id}', parseFloat(this.value))">
             <button class="delete-btn" onclick="deleteLoan('${loan.id}')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         `;
         container.appendChild(div);
@@ -530,8 +547,8 @@ function renderSummary() {
     document.getElementById('total-expense').innerHTML = formatCurrencyWithColor(-expense);
     const nw = getNetWorth();
     document.getElementById('net-worth').innerHTML = formatCurrencyWithColor(nw);
-    const lent = loans.filter(l => l.type === 'lent').reduce((s, l) => s + l.amount, 0);
-    const borrowed = loans.filter(l => l.type === 'borrowed').reduce((s, l) => s + l.amount, 0);
+    const lent = loans.filter(l => l.type === 'lent').reduce((s, l) => s + Math.max(0, l.amount - (l.paid || 0)), 0);
+    const borrowed = loans.filter(l => l.type === 'borrowed').reduce((s, l) => s + Math.max(0, l.amount - (l.paid || 0)), 0);
     document.getElementById('net-worth-breakdown').textContent = `Accounts: ${formatCurrency(totalBal)} + Lent: ${formatCurrency(lent)} - Borrowed: ${formatCurrency(borrowed)}`;
 }
 
@@ -787,9 +804,67 @@ function restoreData(file) {
 // ---------- Modal Handlers ----------
 function openTransactionModal() {
     document.getElementById('transaction-modal').classList.add('open');
-    document.getElementById('modal-description').focus();
+    const descInput = document.getElementById('modal-description');
+    descInput.focus();
     document.getElementById('modal-type').value = 'expense';
     toggleTransferFields();
+
+    // Remove old listener if it exists to avoid duplicates
+    descInput.removeEventListener('input', handleAICategorization);
+    // Add the new AI listener
+    descInput.addEventListener('input', handleAICategorization);
+
+    // SMART ADD Listener
+    const smartInput = document.getElementById('smart-add-input');
+    smartInput.value = ''; // clear it
+    smartInput.onchange = async (e) => {
+        const text = e.target.value.trim();
+        if (!text) return;
+        smartInput.style.opacity = '0.5';
+        try {
+            const parsed = await parseNaturalLanguage(text, accounts);
+            
+            if (parsed.amount) document.getElementById('modal-amount').value = parsed.amount;
+            if (parsed.description) document.getElementById('modal-description').value = parsed.description;
+            if (parsed.type) {
+                document.getElementById('modal-type').value = parsed.type;
+                toggleTransferFields();
+            }
+            if (parsed.category) document.getElementById('modal-category').value = parsed.category;
+            
+            if (parsed.accountName) {
+                const acc = accounts.find(a => a.name.toLowerCase() === parsed.accountName.toLowerCase());
+                if (acc) document.getElementById('modal-account').value = acc.id;
+            }
+        } catch (err) {
+            console.warn('Smart Add failed:', err);
+        } finally {
+            smartInput.style.opacity = '1';
+        }
+    };
+}
+
+// The AI Debounce Function
+function handleAICategorization(e) {
+    const desc = e.target.value.trim();
+    if (desc.length < 3) return; // Wait until there are at least 3 characters
+
+    clearTimeout(window._aiTimer);
+    window._aiTimer = setTimeout(async () => {
+        const catSelect = document.getElementById('modal-category');
+        if (!catSelect) return;
+        
+        try {
+            // Optional: You could change the select visually to show loading here
+            const aiCategory = await categorizeTransaction(desc);
+            if (aiCategory) {
+                catSelect.value = aiCategory;
+                console.log(`🤖 AI categorized "${desc}" as: ${aiCategory}`);
+            }
+        } catch (err) {
+            console.warn('AI categorization skipped:', err.message);
+        }
+    }, 800); // Wait 800ms after user stops typing
 }
 
 function closeTransactionModal() {
@@ -909,6 +984,94 @@ setInterval(() => { const now = new Date().toDateString(); if (now !== lastKnown
 window.addEventListener('online', () => showToast('You are back online', 'success'));
 window.addEventListener('offline', () => showToast('You are offline. App will continue to work.', 'warning'));
 
+// ---------- AI Chat Assistant ----------
+// 1. JS does the math for predictions
+function calculateCashFlowForecast() {
+    const totalBal = accounts.reduce((sum, acc) => sum + acc.balance + getSavingsTotalForAccount(acc.id), 0);
+    
+    // Get unpaid bills for the rest of this month
+    const today = new Date();
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const upcomingBillsTotal = bills
+        .filter(b => !b.paid && new Date(b.dueDate) >= today && new Date(b.dueDate) <= endOfMonth)
+        .reduce((sum, b) => sum + b.amount, 0);
+
+    // Calculate average daily spending this month
+    const { expense } = getMonthlyIncomeExpense();
+    const daysPassed = today.getDate();
+    const avgDailySpend = daysPassed > 0 ? (expense / daysPassed) : 0;
+
+    // Days left in month
+    const daysLeft = endOfMonth.getDate() - today.getDate();
+    
+    // Projected low point: Balance - Bills - (Daily Spend * Days Left)
+    const projectedLow = totalBal - upcomingBillsTotal - (avgDailySpend * daysLeft);
+    
+    // Safe to spend per day
+    const safeToSpendDaily = daysLeft > 0 ? Math.max(0, (totalBal - upcomingBillsTotal) / daysLeft) : 0;
+
+    return {
+        projectedLowBalance: projectedLow,
+        safeToSpendPerDay: safeToSpendDaily,
+        upcomingBillsTotal: upcomingBillsTotal,
+        avgDailySpend: avgDailySpend
+    };
+}
+
+// 2. Feed the math to the AI Chat
+function generateFinancialContext() {
+    const totalBal = accounts.reduce((sum, acc) => sum + acc.balance + getSavingsTotalForAccount(acc.id), 0);
+    const { income, expense } = getMonthlyIncomeExpense();
+    const spending = getCategorySpending(getMonthKey());
+    
+    return {
+        totalBalance: totalBal,
+        netWorth: getNetWorth(),
+        monthlyIncome: income,
+        monthlyExpense: expense,
+        spendingByCategory: spending,
+        activeBills: bills.filter(b => !b.paid).map(b => ({ name: b.name, amount: b.amount })),
+        // ADD THE PREDICTIONS HERE
+        forecast: calculateCashFlowForecast() 
+    };
+}
+
+function setupChat() {
+    const chatModal = document.getElementById('chat-modal');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    
+    document.getElementById('chat-toggle-btn').onclick = () => chatModal.classList.add('open');
+    document.getElementById('close-chat-modal').onclick = () => chatModal.classList.remove('open');
+
+    const sendMessage = async () => {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        chatInput.value = '';
+        
+        chatMessages.innerHTML += `<div style="background: var(--accent); color: white; padding: 10px 14px; border-radius: 12px; border-bottom-right-radius: 2px; align-self: flex-end; max-width: 85%; font-size: 15px;">${text}</div>`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        const loadingId = 'loading-' + Date.now();
+        chatMessages.innerHTML += `<div id="${loadingId}" style="color: var(--text-secondary); font-size: 13px; align-self: flex-start; padding: 4px;">Thinking...</div>`;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const context = generateFinancialContext();
+            const response = await askBudgetQuestion(text, context);
+            document.getElementById(loadingId).remove();
+            chatMessages.innerHTML += `<div style="background: var(--fill-3); padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px;">${response.text}</div>`;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (err) {
+            document.getElementById(loadingId).remove();
+            chatMessages.innerHTML += `<div style="color: var(--expense-color); font-size: 13px; align-self: flex-start; padding: 4px;">Error: ${err.message}</div>`;
+        }
+    };
+
+    document.getElementById('chat-send-btn').onclick = sendMessage;
+    chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+}
+
 // ---------- Initialize & Service Worker ----------
 function initialize() {
     generatePaletteButtons();
@@ -919,6 +1082,9 @@ function initialize() {
     if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
     if (document.getElementById('tab-budget').classList.contains('active')) renderBudgetChart();
     updateBillBadge();
+
+    // ADD THIS LINE TO INITIALIZE CHAT
+    setupChat();
 
     // Register Service Worker for offline caching
     if ('serviceWorker' in navigator) {

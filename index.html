@@ -31,6 +31,10 @@
                 <button id="header-add-btn" class="header-icon-btn" style="display: none;" aria-label="Add item">
                     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
+                <!-- AI Chat Button -->
+                <button id="chat-toggle-btn" class="header-icon-btn" aria-label="AI Assistant" style="margin-right: 8px;">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </button>
                 <!-- Theme Toggle -->
                 <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
                     <!-- Sun and Moon SVGs will be inserted by JS -->
@@ -308,6 +312,11 @@
                     </button>
                 </div>
                 <form id="transaction-form">
+                    <!-- AI SMART ADD INPUT -->
+                    <div style="background: var(--balance-bg); padding: 12px; border-radius: var(--radius-md); margin-bottom: 12px;">
+                        <label style="display:block; font-size:12px; font-weight:600; color:var(--accent); margin-bottom:6px; text-transform:uppercase;">✨ Smart Add</label>
+                        <input type="text" id="smart-add-input" placeholder="e.g. Spent 150 on coffee using GCash" style="margin-bottom:0; background: var(--card-bg);">
+                    </div>
                     <input type="text" id="modal-description" placeholder="Description" required>
                     <input type="number" id="modal-amount" placeholder="Amount" step="0.01" required>
                     <div class="row">
@@ -340,6 +349,29 @@
             </div>
         </div>
 
+        <!-- AI CHAT MODAL -->
+        <div id="chat-modal" class="modal-overlay">
+            <div class="modal glass" style="height: 80dvh; display: flex; flex-direction: column;">
+                <div class="modal-header">
+                    <h2>✨ AI Assistant</h2>
+                    <button class="modal-close" id="close-chat-modal">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <div id="chat-messages" style="flex: 1; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="background: var(--fill-3); padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px;">
+                        Hi! Ask me anything about your budget. E.g., "How much did I spend on food this month?"
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="chat-input" placeholder="Ask a question..." style="margin-bottom: 0; flex: 1;">
+                    <button class="btn" id="chat-send-btn" style="width: 50px; min-height: 50px; padding: 0; margin-top: 0; border-radius: 50%;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- UNIFIED FORM MODAL (Used for Accounts, Savings, Loans, Bills, Budget) -->
         <div id="form-modal" class="modal-overlay">
             <div class="modal glass">
@@ -359,7 +391,8 @@
 
     </div>
 
-    <script src="app.js"></script>
+    <script src="ai-service.js"></script>
+<script src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
