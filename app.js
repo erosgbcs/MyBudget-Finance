@@ -258,7 +258,7 @@ function openFormModal(type) {
 
     if (type === 'account') {
         titleEl.textContent = 'Add Account';
-        fieldsEl.innerHTML = `<input type="text" id="gf-name" placeholder="Account Name (e.g. GCash, BPI)" required>`;
+        fieldsEl.innerHTML = `<input type="text" id="gf-name" placeholder="Account Name (e.g. GCash, BPI)" required><input type="hidden" id="gf-edit-id">`;
     } 
     else if (type === 'savings') {
         titleEl.textContent = 'Add Savings Goal';
@@ -327,6 +327,23 @@ function updateLoanPaid(id, newPaid) {
 }
 function addBill(name, amount, dueDate) { bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false }); saveBills(); renderAll(); showToast('Bill added', 'success'); }
 function deleteBill(id) { bills = bills.filter(b => b.id !== id); saveBills(); renderAll(); }
+
+function toggleBillPaid(id) { 
+    const bill = bills.find(b => b.id === id); 
+    if (!bill) return; 
+    
+    if (!bill.paid) {
+        const defaultAccount = accounts[0];
+        if (!defaultAccount) return alert('Please create an account first.');
+        // Create the expense transaction and deduct from balance
+        addTransaction(`Paid bill: ${bill.name}`, bill.amount, 'expense', 'Bills', defaultAccount.id);
+        bill.paid = true;
+    } else {
+        bill.paid = false;
+    }
+    saveBills(); 
+    renderAll(); 
+}
 // ---------- Financial Health Score ----------
 function calculateHealthScore() {
     const { income, expense } = getMonthlyIncomeExpense();
@@ -509,6 +526,7 @@ function renderAccounts() {
                 </div>
             </div>
             <span class="account-balance ${getAmountClass(effBal)}">${formatCurrency(effBal)}</span>
+            <button class="edit-btn" onclick="editAccount('${acc.id}')" style="background:none; border:none; color:var(--accent); padding:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="delete-btn" onclick="deleteAccount('${acc.id}')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         `;
         container.appendChild(div);
@@ -713,6 +731,7 @@ function renderTransactionList() {
                 </div>
             </div>
             <span class="transaction-amount ${getAmountClass(t.amount)}">${formatCurrencyWithColor(t.amount)}</span>
+            <button class="edit-btn" onclick="openTransactionModal(${t.id})" style="background:none; border:none; color:var(--accent); padding:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button class="delete-btn" onclick="deleteTransaction(${t.id})"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         `;
         list.appendChild(li);
@@ -884,6 +903,34 @@ function renderHealthScore() {
     }
 }
 
+// ---------- Recurring Transactions ----------
+function renderRecurring() {
+    const container = document.getElementById('recurring-list');
+    if (!container) return;
+    if (recurringTx.length === 0) {
+        container.innerHTML = '<p class="transaction-meta">No recurring transactions active.</p>';
+        return;
+    }
+    container.innerHTML = recurringTx.map(rt => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:var(--fill-4); padding:10px 12px; border-radius:8px;">
+            <div>
+                <div style="font-size:14px; font-weight:600; color:var(--text-primary);">${rt.description}</div>
+                <div style="font-size:12px; color:var(--text-secondary);">₱${rt.amount} • Next: ${new Date(rt.nextDate).toLocaleDateString()}</div>
+            </div>
+            <button class="delete-btn" onclick="deleteRecurring('${rt.id}')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+    `).join('');
+}
+
+function deleteRecurring(id) {
+    if(confirm('Cancel this recurring transaction?')) {
+        recurringTx = recurringTx.filter(rt => rt.id !== id);
+        saveRecurring();
+        renderRecurring();
+        showToast('Recurring transaction cancelled', 'success');
+    }
+}
+
 // ---------- Quick Add Templates ----------
 function renderQuickAdds() {
     const section = document.getElementById('quick-add-section');
@@ -932,6 +979,7 @@ function renderAll() {
     renderBudgets();
     renderHealthScore();
     renderQuickAdds();
+    renderRecurring();
     recordNetWorthSnapshot();
     updateBillBadge();
     if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
@@ -1029,7 +1077,7 @@ function restoreData(file) {
 }
 
 // ---------- Modal Handlers ----------
-function openTransactionModal() {
+function openTransactionModal(editId = null) {
     document.getElementById('transaction-modal').classList.add('open');
     const descInput = document.getElementById('modal-description');
     descInput.focus();
@@ -1073,8 +1121,34 @@ function openTransactionModal() {
             smartInput.style.opacity = '1';
         }
     };
+        // Pre-fill if editing
+    if (editId) {
+        const tx = transactions.find(t => t.id === editId);
+        if (tx) {
+            document.getElementById('edit-tx-id').value = tx.id;
+            document.querySelector('#transaction-modal .modal-header h2').textContent = 'Edit Transaction';
+            document.querySelector('#transaction-form button[type="submit"]').textContent = 'Save Changes';
+            document.getElementById('modal-description').value = tx.description;
+            document.getElementById('modal-amount').value = Math.abs(tx.amount);
+            document.getElementById('modal-type').value = tx.type;
+            document.getElementById('modal-account').value = tx.accountId;
+            document.getElementById('modal-category').value = tx.category;
+            toggleTransferFields();
+        }
+    } else {
+        document.getElementById('edit-tx-id').value = '';
+        document.querySelector('#transaction-modal .modal-header h2').textContent = 'Add Transaction';
+        document.querySelector('#transaction-form button[type="submit"]').textContent = 'Add Transaction';
+    }
 }
-
+function editAccount(id) {
+    const acc = accounts.find(a => a.id === id);
+    if (!acc) return;
+    openFormModal('account');
+    document.getElementById('form-modal-title').textContent = 'Edit Account';
+    document.getElementById('gf-name').value = acc.name;
+    document.getElementById('gf-edit-id').value = acc.id;
+}
 // The AI Debounce Function
 function handleAICategorization(e) {
     const desc = e.target.value.trim();
@@ -1179,6 +1253,7 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     const amount = parseFloat(document.getElementById('modal-amount').value);
     const type = document.getElementById('modal-type').value;
     if (!desc || isNaN(amount) || amount <= 0) return alert('Valid description and amount required.');
+    
     if (type === 'transfer') {
         const from = document.getElementById('transfer-from-account').value;
         const to = document.getElementById('transfer-to-account').value;
@@ -1187,17 +1262,42 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
     } else {
         const cat = document.getElementById('modal-category').value;
         const accId = document.getElementById('modal-account').value;
-        addTransaction(desc, amount, type, cat, accId);
+        
+        const editId = document.getElementById('edit-tx-id')?.value;
+        if (editId) {
+            const oldTx = transactions.find(t => t.id == editId);
+            if (oldTx) {
+                // Revert old balance
+                const oldAcc = accounts.find(a => a.id === oldTx.accountId);
+                if (oldAcc) oldAcc.balance -= oldTx.amount;
+                
+                // Apply new details
+                oldTx.description = desc;
+                oldTx.amount = type === 'income' ? Math.abs(amount) : -Math.abs(amount);
+                oldTx.type = type;
+                oldTx.category = cat;
+                oldTx.accountId = accId;
+                
+                // Apply new balance
+                const newAcc = accounts.find(a => a.id === accId);
+                if (newAcc) newAcc.balance += oldTx.amount;
+                
+                saveTransactions(); saveAccounts(); renderAll();
+                showToast('Transaction updated!', 'success');
+            }
+        } else {
+            addTransaction(desc, amount, type, cat, accId);
 
-        if (document.getElementById('modal-recurring').checked) {
-            const nextM = new Date();
-            nextM.setMonth(nextM.getMonth() + 1);
-            recurringTx.push({ 
-                id: 'rec' + Date.now(), description: desc, amount, type, 
-                category: cat, accountId: accId, nextDate: nextM.toISOString() 
-            });
-            saveRecurring();
-            showToast('Recurring transaction saved!', 'success');
+            if (document.getElementById('modal-recurring').checked) {
+                const nextM = new Date();
+                nextM.setMonth(nextM.getMonth() + 1);
+                recurringTx.push({ 
+                    id: 'rec' + Date.now(), description: desc, amount, type, 
+                    category: cat, accountId: accId, nextDate: nextM.toISOString() 
+                });
+                saveRecurring();
+                showToast('Recurring transaction saved!', 'success');
+            }
         }
     }
     closeTransactionModal();
@@ -1207,7 +1307,17 @@ document.getElementById('close-form-modal').addEventListener('click', closeFormM
 document.getElementById('form-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('form-modal')) closeFormModal(); });
 document.getElementById('generic-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    if (currentFormType === 'account') addAccount(document.getElementById('gf-name').value.trim());
+    if (currentFormType === 'account') {
+        const editId = document.getElementById('gf-edit-id')?.value;
+        const name = document.getElementById('gf-name').value.trim();
+        if (editId) {
+            const acc = accounts.find(a => a.id === editId);
+            if (acc) acc.name = name;
+            saveAccounts(); renderAll(); showToast('Account updated', 'success');
+        } else {
+            addAccount(name);
+        }
+    }
     else if (currentFormType === 'savings') addSavingsGoal(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-target').value), parseFloat(document.getElementById('gf-current').value) || 0, document.getElementById('gf-account').value);
     else if (currentFormType === 'loan') addLoan(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-type').value);
     else if (currentFormType === 'bill') addBill(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-due-date').value);
@@ -1557,6 +1667,19 @@ function initialize() {
     checkLockScreen();
     processRecurringTransactions();
     setupFilters();
+
+    // Auto-lock on 2 minutes of inactivity
+    let inactivityTimer;
+    window.resetInactivityTimer = function() {
+        clearTimeout(inactivityTimer);
+        if (appPin && document.getElementById('lock-screen').style.display !== 'flex') {
+            inactivityTimer = setTimeout(() => {
+                checkLockScreen();
+            }, 120000); // 2 minutes
+        }
+    };
+    ['mousemove', 'keydown', 'touchstart', 'click'].forEach(evt => document.addEventListener(evt, window.resetInactivityTimer));
+    window.resetInactivityTimer();
 
     // Register Service Worker for offline caching
     if ('serviceWorker' in navigator) {

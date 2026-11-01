@@ -334,6 +334,12 @@
                     <div id="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
                 </div>
 
+                <!-- Recurring Transactions -->
+                <div class="setting-group">
+                    <h3>Recurring Transactions</h3>
+                    <div id="recurring-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+
                 <!-- Security -->
                 <div class="setting-group">
                     <h3>Security</h3>
@@ -386,6 +392,7 @@
                     </button>
                 </div>
                 <form id="transaction-form">
+                    <input type="hidden" id="edit-tx-id">
                     <!-- AI SMART ADD INPUT -->
                     <div style="background: var(--balance-bg); padding: 12px; border-radius: var(--radius-md); margin-bottom: 12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -503,6 +510,7 @@
                 <form id="generic-form">
                     <!-- Dynamic form fields will be injected here by JS based on current tab -->
                     <div id="form-fields"></div>
+                    <input type="hidden" id="gf-edit-id">
                     <button type="submit" class="btn" id="form-submit-btn">Save</button>
                 </form>
             </div>
