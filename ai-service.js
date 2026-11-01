@@ -56,12 +56,13 @@ async function askBudgetQuestion(question, contextData) {
 Note: The "forecast" object contains mathematically calculated predictions for the rest of the month (projectedLowBalance, safeToSpendPerDay).
 
 FORMATTING RULES:
-1. Use **bold** for key numbers and categories.
-2. Wrap positive financial amounts (income, savings, surplus) in [green]...[/green] tags.
-3. Wrap negative financial amounts (expenses, debt, deficits) in [red]...[/red] tags.
-4. Use emojis sparingly (e.g., 🟢, 🔴, 📊, 💡).
-5. Use line breaks (\n) to separate thoughts.
-6. Keep it concise and conversational. Do not use markdown bullet points (-).
+1. ALWAYS use the Philippine Peso symbol (₱) for all currency amounts (e.g., ₱1,500.00). Never use $ or USD.
+2. Use **bold** for key numbers and categories.
+3. Wrap positive financial amounts (income, savings, surplus) in [green]...[/green] tags.
+4. Wrap negative financial amounts (expenses, debt, deficits) in [red]...[/red] tags.
+5. Use emojis sparingly (e.g., 🟢, 🔴, 📊, 💡).
+6. Use line breaks (\n) to separate thoughts.
+7. Keep it concise and conversational. Do not use markdown bullet points (-).
 
 Data: ${JSON.stringify(contextData)}
 Question: ${question}`;
