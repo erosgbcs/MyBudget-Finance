@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MyBudget</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .score-ring {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: conic-gradient(var(--ring-color) calc(var(--score) * 1%), var(--fill-3) 0);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: background 0.5s ease;
+        }
+        .score-inner {
+            width: 52px; height: 52px; border-radius: 50%;
+            background: var(--card-bg); display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 18px; color: var(--text-primary);
+        }
+        #quick-add-list::-webkit-scrollbar { display: none; }
+    </style>
     <link rel="manifest" href="manifest.json">
     <!-- iOS system blue -->
     <meta name="theme-color" content="#007AFF">
@@ -58,6 +72,25 @@
                     <h3 id="total-expense">₱0.00</h3>
                 </div>
             </div>
+            <!-- FINANCIAL HEALTH SCORE -->
+            <div class="section glass" style="padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
+                <div class="score-ring" id="health-score-ring" style="--score: 0; --ring-color: var(--accent);">
+                    <div class="score-inner" id="health-score-value">0</div>
+                </div>
+                <div style="flex: 1;">
+                    <h2 style="font-size: 15px; font-weight: 600; margin-bottom: 4px;">Financial Health</h2>
+                    <p id="health-score-tip" class="transaction-meta" style="line-height: 1.4;">Calculating your score...</p>
+                </div>
+            </div>
+
+            <!-- QUICK ADD TEMPLATES -->
+            <div class="section glass" id="quick-add-section" style="display: none; padding: 12px 16px; margin-bottom: 16px;">
+                <div class="section-header" style="margin-bottom: 8px;">
+                    <h2>⚡ Quick Add</h2>
+                </div>
+                <div id="quick-add-list" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;"></div>
+            </div>
+
             <div class="card glass net-worth-card">
                 <p>Net Worth</p>
                 <h2 id="net-worth">₱0.00</h2>
@@ -386,9 +419,12 @@
                         <label style="display:block; margin:8px 0 6px; font-size:13px; color:var(--text-secondary);">To Account</label>
                         <select id="transfer-to-account"></select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px; margin: 10px 0 15px 0;">
-                        <input type="checkbox" id="modal-recurring" style="width: 20px; height: 20px; margin: 0; min-height: auto;">
-                        <label for="modal-recurring" style="font-size: 15px; color: var(--text-primary); margin: 0;">Repeat Monthly</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 15px 0;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="modal-recurring" style="width: 20px; height: 20px; margin: 0; min-height: auto;">
+                            <label for="modal-recurring" style="font-size: 15px; color: var(--text-primary); margin: 0;">Repeat Monthly</label>
+                        </div>
+                        <button type="button" id="save-template-btn" style="background: var(--fill-3); border: none; padding: 6px 10px; border-radius: 8px; font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer;">⭐ Save as Template</button>
                     </div>
                     <button type="submit" class="btn">Add Transaction</button>
                 </form>

@@ -24,6 +24,8 @@ let netWorthHistory = safeParse('mb_networth_history', []);
 let appPin = localStorage.getItem('mb_pin') || null;
 let recurringTx = safeParse('mb_recurring', []);
 let customCategories = safeParse('mb_custom_categories', []);
+let quickTemplates = safeParse('mb_templates', []);
+function saveTemplates() { localStorage.setItem('mb_templates', JSON.stringify(quickTemplates)); }
 
 const DEFAULT_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Salary', 'Other Income', 'Other'];
 function getAllCategories() {
@@ -836,6 +838,103 @@ function renderBudgetChart() {
     });
 }
 
+// ---------- Financial Health Score ----------
+function calculateHealthScore() {
+    const { income, expense } = getMonthlyIncomeExpense();
+    let score = 50; // Base score
+    let tip = "Keep tracking your expenses to improve your score!";
+
+    // 1. Savings Rate (Max 40 points)
+    if (income > 0) {
+        const savingsRate = (income - expense) / income;
+        if (savingsRate >= 0.2) { score += 40; tip = "Excellent savings rate! You are saving over 20% of your income."; }
+        else if (savingsRate > 0) { score += 20; tip = "Good job saving, but try to aim for 20% of your income."; }
+        else { score -= 10; tip = "You are spending more than you earn this month."; }
+    } else if (expense > 0) {
+        tip = "Add your income to get a more accurate health score.";
+    }
+
+    // 2. Debt Ratio (Max 30 points)
+    const activeDebt = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0).reduce((sum, l) => sum + (l.amount - (l.paid || 0)), 0);
+    if (activeDebt === 0) { score += 30; }
+    else if (income > 0 && (activeDebt / income) < 0.3) { score += 15; }
+    else if (activeDebt > 0) { score -= 10; }
+
+    // 3. Budget Adherence (Max 30 points)
+    const budgetsThisMonth = budgets[getMonthKey()] || {};
+    const spendThisMonth = getCategorySpending(getMonthKey());
+    let categoriesOverBudget = 0;
+    Object.keys(budgetsThisMonth).forEach(cat => {
+        if ((spendThisMonth[cat] || 0) > budgetsThisMonth[cat]) categoriesOverBudget++;
+    });
+    
+    if (Object.keys(budgetsThisMonth).length > 0) {
+        if (categoriesOverBudget === 0) { score += 30; }
+        else { score -= (categoriesOverBudget * 10); }
+    }
+
+    // Cap score between 0 and 100
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    // Determine color
+    let color = 'var(--expense-color)'; // Red
+    if (score >= 75) color = 'var(--income-color)'; // Green
+    else if (score >= 50) color = 'var(--warning-color)'; // Orange
+
+    return { score, color, tip };
+}
+
+function renderHealthScore() {
+    const { score, color, tip } = calculateHealthScore();
+    const ring = document.getElementById('health-score-ring');
+    const val = document.getElementById('health-score-value');
+    const tipEl = document.getElementById('health-score-tip');
+
+    if (ring && val && tipEl) {
+        ring.style.setProperty('--score', score);
+        ring.style.setProperty('--ring-color', color);
+        val.textContent = score;
+        val.style.color = color;
+        tipEl.textContent = tip;
+    }
+}
+
+// ---------- Quick Add Templates ----------
+function renderQuickAdds() {
+    const section = document.getElementById('quick-add-section');
+    const list = document.getElementById('quick-add-list');
+    if (!section || !list) return;
+
+    if (quickTemplates.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    list.innerHTML = quickTemplates.map(t => `
+        <div style="position: relative;">
+            <button onclick="executeTemplate('${t.id}')" style="background: var(--fill-3); border: none; padding: 10px 14px; border-radius: 12px; white-space: nowrap; cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; min-width: 100px;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${t.description}</span>
+                <span style="font-size: 12px; color: var(--text-secondary);">₱${t.amount}</span>
+            </button>
+            <button onclick="deleteTemplate('${t.id}')" style="position: absolute; top: -6px; right: -6px; background: var(--expense-color); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+    `).join('');
+}
+
+function executeTemplate(id) {
+    const t = quickTemplates.find(x => x.id === id);
+    if (t) {
+        addTransaction(t.description, t.amount, t.type, t.category, t.accountId);
+    }
+}
+
+function deleteTemplate(id) {
+    quickTemplates = quickTemplates.filter(t => t.id !== id);
+    saveTemplates();
+    renderQuickAdds();
+}
+
 function renderAll() {
     renderAccounts();
     renderAccountBalances();
@@ -846,6 +945,8 @@ function renderAll() {
     renderTransactionList();
     renderTransactionPreview();
     renderBudgets();
+    renderHealthScore();
+    renderQuickAdds();
     recordNetWorthSnapshot();
     updateBillBadge();
     if (document.getElementById('tab-charts').classList.contains('active')) renderCharts();
@@ -1067,6 +1168,23 @@ document.getElementById('header-add-btn').addEventListener('click', () => {
 document.getElementById('fab-add-transaction').addEventListener('click', openTransactionModal);
 document.getElementById('open-modal-btn').addEventListener('click', openTransactionModal);
 document.getElementById('close-modal').addEventListener('click', closeTransactionModal);
+
+document.getElementById('save-template-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    const desc = document.getElementById('modal-description').value.trim();
+    const amount = parseFloat(document.getElementById('modal-amount').value);
+    const type = document.getElementById('modal-type').value;
+    const cat = document.getElementById('modal-category').value;
+    const accId = document.getElementById('modal-account').value;
+
+    if (!desc || isNaN(amount)) return showToast('Enter a description and amount first', 'warning');
+
+    quickTemplates.push({ id: 'temp' + Date.now(), description: desc, amount, type, category: cat, accountId: accId });
+    saveTemplates();
+    renderQuickAdds();
+    showToast('Template saved!', 'success');
+    document.getElementById('transaction-modal').classList.remove('open');
+});
 document.getElementById('modal-type').addEventListener('change', toggleTransferFields);
 document.getElementById('transaction-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('transaction-modal')) closeTransactionModal(); });
 
