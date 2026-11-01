@@ -72,6 +72,15 @@
                     <h3 id="total-expense">₱0.00</h3>
                 </div>
             </div>
+            <!-- ANOMALY DETECTION BANNER -->
+            <div id="anomaly-banner" style="display: none; background: rgba(255, 149, 0, 0.15); border: 1px solid var(--warning-color); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; justify-content: space-between; align-items: flex-start; gap: 12px; animation: slideIn 0.3s ease;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <span style="font-size: 20px; line-height: 1;">⚠️</span>
+                    <p id="anomaly-text" style="font-size: 14px; color: var(--text-primary); line-height: 1.4; margin: 0;">Spending alert...</p>
+                </div>
+                <button id="close-anomaly-btn" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 20px; line-height: 1; padding: 0;">&times;</button>
+            </div>
+
             <!-- FINANCIAL HEALTH SCORE -->
             <div class="section glass" style="padding: 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px;">
                 <div class="score-ring" id="health-score-ring" style="--score: 0; --ring-color: var(--accent);">
@@ -332,6 +341,13 @@
                         <button id="add-category-btn" class="btn btn-small" style="width:auto; margin-top:0;">Add</button>
                     </div>
                     <div id="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                </div>
+
+                <!-- AI Tools -->
+                <div class="setting-group">
+                    <h3>AI Tools</h3>
+                    <button id="ai-cleanup-btn" class="btn" style="background: var(--fill-3); color: var(--accent);">✨ AI Cleanup: Auto-categorize transactions</button>
+                    <p id="cleanup-status" class="transaction-meta" style="margin-top: 8px;"></p>
                 </div>
 
                 <!-- Recurring Transactions -->

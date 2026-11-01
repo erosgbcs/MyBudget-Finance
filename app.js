@@ -1,3 +1,6 @@
+// ---------- app.js ----------
+
+
 // ---------- Safe Data Loader ----------
 function safeParse(key, fallback) {
     try {
@@ -1411,6 +1414,48 @@ document.getElementById('add-category-btn').addEventListener('click', () => {
 // Debt Calculator
 document.getElementById('calc-debt-btn').addEventListener('click', calculateDebtPayoff);
 
+// AI Cleanup
+document.getElementById('ai-cleanup-btn').addEventListener('click', async function() {
+    const btn = this;
+    const statusEl = document.getElementById('cleanup-status');
+    
+    // Find transactions with 'Other' or missing category
+    const uncategorized = transactions.filter(t => !t.category || t.category === 'Other');
+    
+    if (uncategorized.length === 0) {
+        statusEl.textContent = "All transactions are already neatly categorized!";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Processing...';
+    let updated = 0;
+
+    for (let i = 0; i < uncategorized.length; i++) {
+        const tx = uncategorized[i];
+        statusEl.textContent = `Analyzing ${i + 1} of ${uncategorized.length}...`;
+        try {
+            const newCat = await categorizeTransaction(tx.description);
+            if (newCat && newCat !== 'Other') {
+                tx.category = newCat;
+                updated++;
+            }
+        } catch (err) {
+            console.warn("Failed to categorize:", tx.description);
+        }
+        // 500ms delay to avoid spamming the AI API
+        await new Promise(r => setTimeout(r, 500)); 
+    }
+
+    saveTransactions();
+    renderAll();
+    
+    btn.innerHTML = '✨ AI Cleanup: Auto-categorize transactions';
+    btn.disabled = false;
+    statusEl.textContent = `Successfully categorized ${updated} transactions!`;
+    showToast(`AI Cleanup complete: ${updated} updated`, 'success');
+});
+
 // Receipt Scanning
 document.getElementById('scan-receipt-btn').addEventListener('click', () => document.getElementById('receipt-file-input').click());
 document.getElementById('receipt-file-input').addEventListener('change', (e) => {
@@ -1762,6 +1807,61 @@ function initialize() {
     };
     ['mousemove', 'keydown', 'touchstart', 'click'].forEach(evt => document.addEventListener(evt, window.resetInactivityTimer));
     window.resetInactivityTimer();
+
+    // Anomaly Detection Logic
+    function checkForAnomalies() {
+        const banner = document.getElementById('anomaly-banner');
+        if (!banner || localStorage.getItem('mb_anomaly_dismissed') === new Date().toDateString()) return;
+
+        const today = new Date();
+        const last7Days = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        
+        // Calculate avg daily spend this month (excluding last 7 days)
+        const monthKey = getMonthKey();
+        let monthlyExpense = 0;
+        let daysPassed = Math.max(1, today.getDate() - 7); 
+
+        transactions.forEach(t => {
+            const d = new Date(t.date);
+            if (t.type === 'expense' && getMonthKeyFromTransaction(t) === monthKey && d < last7Days) {
+                monthlyExpense += Math.abs(t.amount);
+            }
+        });
+
+        const avgDaily = monthlyExpense / daysPassed;
+        const avgWeekly = avgDaily * 7;
+
+        // Calculate last 7 days spending
+        let recentExpense = 0;
+        const catSpend = {};
+        transactions.forEach(t => {
+            const d = new Date(t.date);
+            if (t.type === 'expense' && d >= last7Days && d <= today) {
+                const amt = Math.abs(t.amount);
+                recentExpense += amt;
+                catSpend[t.category || 'Other'] = (catSpend[t.category || 'Other'] || 0) + amt;
+            }
+        });
+
+        // Only trigger if the baseline is significant (> ₱500) and recent is 40% higher
+        if (avgWeekly > 500 && recentExpense > avgWeekly * 1.4) {
+            let topCat = 'Overall';
+            let topCatAmt = 0;
+            Object.entries(catSpend).forEach(([k, v]) => {
+                if (v > topCatAmt) { topCatAmt = v; topCat = k; }
+            });
+
+            const pctHigher = Math.round(((recentExpense - avgWeekly) / avgWeekly) * 100);
+            document.getElementById('anomaly-text').innerHTML = `You spent <strong>${formatCurrency(recentExpense)}</strong> this week, which is <strong>${pctHigher}%</strong> higher than your average. Top category: <strong>${topCat}</strong>.`;
+            banner.style.display = 'flex';
+        }
+    }
+    
+    checkForAnomalies();
+    document.getElementById('close-anomaly-btn').addEventListener('click', () => {
+        document.getElementById('anomaly-banner').style.display = 'none';
+        localStorage.setItem('mb_anomaly_dismissed', new Date().toDateString());
+    });
 
     // Haptic Feedback for all clicks
     document.body.addEventListener('click', (e) => {
