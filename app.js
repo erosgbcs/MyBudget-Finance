@@ -35,6 +35,28 @@ function getAllCategories() {
     return [...DEFAULT_CATEGORIES, ...customCategories];
 }
 function saveCustomCategories() { localStorage.setItem('mb_custom_categories', JSON.stringify(customCategories)); }
+
+// Helper to handle AI-generated new categories
+function addAutoCategory(newCat) {
+    if (!newCat || newCat === 'Other') return;
+    const allCats = getAllCategories();
+    // Check case-insensitively
+    if (!allCats.some(c => c.toLowerCase() === newCat.toLowerCase())) {
+        customCategories.push(newCat);
+        saveCustomCategories();
+        renderCustomCategories();
+        
+        // Update the dropdown in the transaction modal if it's open
+        const catSelect = document.getElementById('modal-category');
+        if (catSelect) {
+            const opt = document.createElement('option');
+            opt.value = newCat;
+            opt.textContent = newCat;
+            catSelect.appendChild(opt);
+        }
+        showToast(`✨ AI created new category: ${newCat}`, 'success');
+    }
+}
 let advFilters = { start: '', end: '', category: 'all', account: 'all' };
 
 function saveRecurring() { localStorage.setItem('mb_recurring', JSON.stringify(recurringTx)); }
@@ -1148,7 +1170,7 @@ function openTransactionModal(editId = null) {
         if (!text) return;
         smartInput.style.opacity = '0.5';
         try {
-            const parsed = await parseNaturalLanguage(text, accounts);
+            const parsed = await parseNaturalLanguage(text, accounts, getAllCategories());
             
             if (parsed.amount) document.getElementById('modal-amount').value = parsed.amount;
             if (parsed.description) document.getElementById('modal-description').value = parsed.description;
@@ -1156,7 +1178,10 @@ function openTransactionModal(editId = null) {
                 document.getElementById('modal-type').value = parsed.type;
                 toggleTransferFields();
             }
-            if (parsed.category) document.getElementById('modal-category').value = parsed.category;
+            if (parsed.category) {
+                addAutoCategory(parsed.category); 
+                document.getElementById('modal-category').value = parsed.category;
+            }
             
             if (parsed.accountName) {
                 const acc = accounts.find(a => a.name.toLowerCase() === parsed.accountName.toLowerCase());
@@ -1208,8 +1233,9 @@ function handleAICategorization(e) {
         
         try {
             // Optional: You could change the select visually to show loading here
-            const aiCategory = await categorizeTransaction(desc);
+            const aiCategory = await categorizeTransaction(desc, getAllCategories());
             if (aiCategory) {
+                addAutoCategory(aiCategory); 
                 catSelect.value = aiCategory;
                 console.log(`🤖 AI categorized "${desc}" as: ${aiCategory}`);
             }
@@ -1435,8 +1461,9 @@ document.getElementById('ai-cleanup-btn').addEventListener('click', async functi
         const tx = uncategorized[i];
         statusEl.textContent = `Analyzing ${i + 1} of ${uncategorized.length}...`;
         try {
-            const newCat = await categorizeTransaction(tx.description);
+            const newCat = await categorizeTransaction(tx.description, getAllCategories());
             if (newCat && newCat !== 'Other') {
+                addAutoCategory(newCat); 
                 tx.category = newCat;
                 updated++;
             }
@@ -1591,7 +1618,7 @@ function setupChat() {
             const lowerText = text.toLowerCase();
             // Check if user is trying to add a transaction via chat
             if (lowerText.startsWith('add ') || lowerText.includes('spent ') || lowerText.includes('bought ') || lowerText.includes('paid ') || lowerText.includes('received ')) {
-                const parsed = await parseNaturalLanguage(text, accounts);
+                const parsed = await parseNaturalLanguage(text, accounts, getAllCategories());
                 if (parsed && parsed.amount && parsed.description) {
                     let accId = accounts[0]?.id;
                     if (parsed.accountName) {
@@ -1599,6 +1626,7 @@ function setupChat() {
                         if (found) accId = found.id;
                     }
                     if (accId) {
+                        if (parsed.category) addAutoCategory(parsed.category); // <-- ADD THIS LINE
                         addTransaction(parsed.description, parsed.amount, parsed.type || 'expense', parsed.category || 'Other', accId);
                         document.getElementById(loadingId).remove();
                         chatMessages.innerHTML += `<div style="background: var(--income-bg); color: var(--text-primary); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">✅ Transaction added: <strong>${parsed.description}</strong> for ₱${parsed.amount} (${parsed.category || 'Other'}).</div>`;
