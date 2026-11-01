@@ -21,6 +21,11 @@ let savings = safeParse('mb_savings', []);
 let loans = safeParse('mb_loans', []);
 let bills = safeParse('mb_bills', []);
 let netWorthHistory = safeParse('mb_networth_history', []);
+let appPin = localStorage.getItem('mb_pin') || null;
+let recurringTx = safeParse('mb_recurring', []);
+let advFilters = { start: '', end: '', category: 'all', account: 'all' };
+
+function saveRecurring() { localStorage.setItem('mb_recurring', JSON.stringify(recurringTx)); }
 
 let currentFilter = 'all';
 let searchQuery = '';
@@ -321,6 +326,36 @@ function deleteBill(id) { bills = bills.filter(b => b.id !== id); saveBills(); r
 function toggleBillPaid(id) { const bill = bills.find(b => b.id === id); if (bill) { bill.paid = !bill.paid; saveBills(); renderAll(); } }
 function setBudget(category, limit) { const monthKey = getMonthKey(); if (!budgets[monthKey]) budgets[monthKey] = {}; budgets[monthKey][category] = limit; saveBudgets(); renderAll(); showToast('Budget set', 'success'); }
 
+function processRecurringTransactions() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    let processed = false;
+
+    recurringTx.forEach(rt => {
+        const nextDate = new Date(rt.nextDate);
+        if (today >= nextDate) {
+            const signedAmount = rt.type === 'income' ? Math.abs(rt.amount) : -Math.abs(rt.amount);
+            transactions.push({ 
+                id: Date.now() + Math.random(), 
+                type: rt.type, description: rt.description, 
+                amount: signedAmount, category: rt.category, 
+                accountId: rt.accountId, date: new Date().toISOString() 
+            });
+            const account = accounts.find(acc => acc.id === rt.accountId);
+            if (account) account.balance += signedAmount;
+
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            rt.nextDate = nextDate.toISOString();
+            processed = true;
+        }
+    });
+
+    if (processed) {
+        saveTransactions(); saveAccounts(); saveRecurring(); renderAll();
+        showToast('Recurring transactions processed.', 'success');
+    }
+}
+
 function addTransaction(description, amount, type, category, accountId, transferToAccountId = null) {
     if (type === 'transfer') {
         const fromAccount = accounts.find(acc => acc.id === accountId);
@@ -570,7 +605,14 @@ function renderTransactionList() {
         const matchF = currentFilter === 'all' || (currentFilter === 'income' && t.type === 'income') || (currentFilter === 'expense' && t.type === 'expense');
         const q = searchQuery.toLowerCase();
         const matchS = t.description.toLowerCase().includes(q) || (t.category && t.category.toLowerCase().includes(q));
-        return matchF && matchS;
+        
+        let matchAdv = true;
+        if (advFilters.start && t.date.slice(0,10) < advFilters.start) matchAdv = false;
+        if (advFilters.end && t.date.slice(0,10) > advFilters.end) matchAdv = false;
+        if (advFilters.category !== 'all' && t.category !== advFilters.category) matchAdv = false;
+        if (advFilters.account !== 'all' && t.accountId !== advFilters.account) matchAdv = false;
+
+        return matchF && matchS && matchAdv;
     });
     if (!filtered.length) { list.innerHTML = `<li><div class="empty-state">No transactions found.</div></li>`; return; }
     filtered.forEach(t => {
@@ -984,7 +1026,20 @@ document.getElementById('transaction-form').addEventListener('submit', (e) => {
         if (from === to) return alert('Accounts must be different.');
         addTransaction(desc, amount, type, 'Transfer', from, to);
     } else {
-        addTransaction(desc, amount, type, document.getElementById('modal-category').value, document.getElementById('modal-account').value);
+        const cat = document.getElementById('modal-category').value;
+        const accId = document.getElementById('modal-account').value;
+        addTransaction(desc, amount, type, cat, accId);
+
+        if (document.getElementById('modal-recurring').checked) {
+            const nextM = new Date();
+            nextM.setMonth(nextM.getMonth() + 1);
+            recurringTx.push({ 
+                id: 'rec' + Date.now(), description: desc, amount, type, 
+                category: cat, accountId: accId, nextDate: nextM.toISOString() 
+            });
+            saveRecurring();
+            showToast('Recurring transaction saved!', 'success');
+        }
     }
     closeTransactionModal();
 });
@@ -1145,6 +1200,88 @@ function setupChat() {
     chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 }
 
+// ---------- Security, Filters & Lock ----------
+function checkLockScreen() {
+    if (appPin) {
+        document.getElementById('lock-screen').style.display = 'flex';
+        document.getElementById('unlock-pin-input').focus();
+    }
+}
+
+function setupSecurity() {
+    const setupInput = document.getElementById('setup-pin-input');
+    const unlockInput = document.getElementById('unlock-pin-input');
+    const pinError = document.getElementById('pin-error');
+
+    document.getElementById('save-pin-btn').onclick = () => {
+        const pin = setupInput.value.trim();
+        if (pin.length === 4 && !isNaN(pin)) {
+            appPin = pin;
+            localStorage.setItem('mb_pin', appPin);
+            showToast('PIN successfully set!', 'success');
+            setupInput.value = '';
+        } else {
+            alert('Please enter exactly 4 numbers.');
+        }
+    };
+
+    document.getElementById('remove-pin-btn').onclick = () => {
+        if (confirm('Are you sure you want to remove the PIN lock?')) {
+            appPin = null;
+            localStorage.removeItem('mb_pin');
+            showToast('PIN removed', 'success');
+        }
+    };
+
+    document.getElementById('unlock-btn').onclick = () => {
+        if (unlockInput.value === appPin) {
+            document.getElementById('lock-screen').style.display = 'none';
+            unlockInput.value = '';
+            pinError.style.display = 'none';
+        } else {
+            pinError.style.display = 'block';
+            unlockInput.value = '';
+        }
+    };
+}
+
+function setupFilters() {
+    const modal = document.getElementById('filter-modal');
+    document.getElementById('open-filter-btn').onclick = () => {
+        const cats = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other', 'Salary', 'Other Income'];
+        document.getElementById('filter-category').innerHTML = '<option value="all">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('filter-account').innerHTML = '<option value="all">All Accounts</option>' + accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        
+        document.getElementById('filter-start-date').value = advFilters.start;
+        document.getElementById('filter-end-date').value = advFilters.end;
+        document.getElementById('filter-category').value = advFilters.category;
+        document.getElementById('filter-account').value = advFilters.account;
+        
+        modal.classList.add('open');
+    };
+
+    document.getElementById('close-filter-modal').onclick = () => modal.classList.remove('open');
+    
+    document.getElementById('apply-filter-btn').onclick = () => {
+        advFilters.start = document.getElementById('filter-start-date').value;
+        advFilters.end = document.getElementById('filter-end-date').value;
+        advFilters.category = document.getElementById('filter-category').value;
+        advFilters.account = document.getElementById('filter-account').value;
+        modal.classList.remove('open');
+        renderTransactionList();
+    };
+
+    document.getElementById('clear-filter-btn').onclick = () => {
+        advFilters = { start: '', end: '', category: 'all', account: 'all' };
+        document.getElementById('filter-start-date').value = '';
+        document.getElementById('filter-end-date').value = '';
+        document.getElementById('filter-category').value = 'all';
+        document.getElementById('filter-account').value = 'all';
+        renderTransactionList();
+        modal.classList.remove('open');
+    };
+}
+
 // ---------- Initialize & Service Worker ----------
 function initialize() {
     generatePaletteButtons();
@@ -1158,6 +1295,11 @@ function initialize() {
 
     // ADD THIS LINE TO INITIALIZE CHAT
     setupChat();
+    
+    setupSecurity();
+    checkLockScreen();
+    processRecurringTransactions();
+    setupFilters();
 
     // Register Service Worker for offline caching
     if ('serviceWorker' in navigator) {

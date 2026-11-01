@@ -86,8 +86,11 @@
                     <!-- Kept inline button for direct access, though FAB also works -->
                     <button class="btn btn-small" id="open-modal-btn">+ Add</button>
                 </div>
-                <div class="search-container">
-                    <input type="text" id="search-transactions" placeholder="Search by description or category...">
+                <div class="search-container" style="display: flex; gap: 8px;">
+                    <input type="text" id="search-transactions" placeholder="Search by description or category..." style="margin-bottom: 0;">
+                    <button id="open-filter-btn" class="btn btn-small" style="width: 50px; padding: 0; flex-shrink: 0;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    </button>
                 </div>
                 <div class="filters">
                     <button class="filter-btn active" data-filter="all">All</button>
@@ -277,6 +280,15 @@
                     <p id="backup-status" class="transaction-meta" style="margin-top:8px;"></p>
                 </div>
 
+                <!-- Security -->
+                <div class="setting-group">
+                    <h3>Security</h3>
+                    <p class="transaction-meta" style="margin-bottom: 8px;">Set a 4-digit PIN to lock the app when opened.</p>
+                    <input type="password" id="setup-pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="Enter 4-digit PIN" style="width: 150px; display: inline-block; margin-right: 10px;">
+                    <button id="save-pin-btn" class="btn btn-small" style="vertical-align: top;">Save PIN</button>
+                    <button id="remove-pin-btn" class="btn btn-small" style="vertical-align: top; background: var(--expense-bg); color: var(--expense-color);">Remove</button>
+                </div>
+
                 <!-- Danger Zone -->
                 <div class="setting-group" style="margin-top: 40px;">
                     <h3 style="color: var(--expense-color);">Danger Zone</h3>
@@ -352,6 +364,10 @@
                         <label style="display:block; margin:8px 0 6px; font-size:13px; color:var(--text-secondary);">To Account</label>
                         <select id="transfer-to-account"></select>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin: 10px 0 15px 0;">
+                        <input type="checkbox" id="modal-recurring" style="width: 20px; height: 20px; margin: 0; min-height: auto;">
+                        <label for="modal-recurring" style="font-size: 15px; color: var(--text-primary); margin: 0;">Repeat Monthly</label>
+                    </div>
                     <button type="submit" class="btn">Add Transaction</button>
                 </form>
             </div>
@@ -377,6 +393,40 @@
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- FILTER MODAL -->
+        <div id="filter-modal" class="modal-overlay">
+            <div class="modal glass">
+                <div class="modal-header">
+                    <h2>Filter Transactions</h2>
+                    <button class="modal-close" id="close-filter-modal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                </div>
+                <label style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; display:block;">Start Date</label>
+                <input type="date" id="filter-start-date">
+                <label style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; display:block;">End Date</label>
+                <input type="date" id="filter-end-date">
+                <label style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; display:block;">Category</label>
+                <select id="filter-category"></select>
+                <label style="font-size:13px; color:var(--text-secondary); margin-bottom:4px; display:block;">Account</label>
+                <select id="filter-account"></select>
+                
+                <div style="display:flex; gap: 10px; margin-top: 15px;">
+                    <button id="clear-filter-btn" class="btn secondary" style="margin-top:0;">Clear</button>
+                    <button id="apply-filter-btn" class="btn" style="margin-top:0;">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- APP LOCK SCREEN -->
+        <div id="lock-screen" class="modal-overlay" style="z-index: 9999; display: none; align-items: center; backdrop-filter: blur(10px); background: rgba(0,0,0,0.8);">
+            <div class="modal glass" style="max-width: 300px; text-align: center; padding: 30px 20px;">
+                <h2 style="margin-bottom: 10px;">🔒 App Locked</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">Enter your 4-digit PIN to access MyBudget</p>
+                <input type="password" id="unlock-pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" style="text-align: center; font-size: 32px; letter-spacing: 12px; padding: 10px; margin-bottom: 20px; border-radius: var(--radius-md);">
+                <button id="unlock-btn" class="btn">Unlock</button>
+                <p id="pin-error" style="color: var(--expense-color); font-size: 13px; margin-top: 10px; display: none;">Incorrect PIN. Try again.</p>
             </div>
         </div>
 
