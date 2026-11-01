@@ -1,15 +1,26 @@
+// ---------- Safe Data Loader ----------
+function safeParse(key, fallback) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : fallback;
+    } catch (e) {
+        console.error("Corrupted data for", key, e);
+        return fallback;
+    }
+}
+
 // ---------- Data Structures ----------
-let accounts = JSON.parse(localStorage.getItem('mb_accounts')) || [
+let accounts = safeParse('mb_accounts', [
     { id: 'acc1', name: 'GCash', balance: 0 },
     { id: 'acc2', name: 'Maribank', balance: 0 },
     { id: 'acc3', name: 'Cash', balance: 0 }
-];
-let transactions = JSON.parse(localStorage.getItem('mb_transactions')) || [];
-let budgets = JSON.parse(localStorage.getItem('mb_budgets')) || {};
-let savings = JSON.parse(localStorage.getItem('mb_savings')) || [];
-let loans = JSON.parse(localStorage.getItem('mb_loans')) || [];
-let bills = JSON.parse(localStorage.getItem('mb_bills')) || [];
-let netWorthHistory = JSON.parse(localStorage.getItem('mb_networth_history')) || [];
+]);
+let transactions = safeParse('mb_transactions', []);
+let budgets = safeParse('mb_budgets', {});
+let savings = safeParse('mb_savings', []);
+let loans = safeParse('mb_loans', []);
+let bills = safeParse('mb_bills', []);
+let netWorthHistory = safeParse('mb_networth_history', []);
 
 let currentFilter = 'all';
 let searchQuery = '';
@@ -775,6 +786,42 @@ function backupData() {
     showToast('Backup downloaded!', 'success');
 }
 
+function exportCSV() {
+    if (!transactions.length) return showToast('No transactions to export.', 'warning');
+    
+    const headers = ['Date', 'Description', 'Type', 'Category', 'Amount', 'Account'];
+    const rows = transactions.map(t => {
+        const acc = accounts.find(a => a.id === t.accountId);
+        return [
+            new Date(t.date).toLocaleDateString(),
+            `"${t.description.replace(/"/g, '""')}"`,
+            t.type,
+            t.category,
+            t.amount,
+            `"${acc ? acc.name : 'Unknown'}"`
+        ].join(',');
+    });
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `mybudget-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    showToast('CSV exported successfully!', 'success');
+}
+
+function clearAllData() {
+    const confirm1 = confirm("Are you sure you want to delete ALL data? This cannot be undone.");
+    if (confirm1) {
+        const confirm2 = confirm("FINAL WARNING: This will permanently delete all your accounts, transactions, and settings. Are you absolutely sure?");
+        if (confirm2) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+}
+
 function restoreData(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -975,8 +1022,10 @@ document.getElementById('enable-notifications-btn').addEventListener('click', as
 });
 
 document.getElementById('backup-data-btn').addEventListener('click', backupData);
+document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
 document.getElementById('restore-data-btn').addEventListener('click', () => document.getElementById('restore-file-input').click());
 document.getElementById('restore-file-input').addEventListener('change', (e) => { if (e.target.files[0]) restoreData(e.target.files[0]); e.target.value = ''; });
+document.getElementById('clear-data-btn').addEventListener('click', clearAllData);
 
 setInterval(() => { const now = new Date().toDateString(); if (now !== lastKnownDate) { lastKnownDate = now; renderAll(); } }, 60000);
 

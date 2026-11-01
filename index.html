@@ -270,10 +270,18 @@
                 <!-- Backup & Restore -->
                 <div class="setting-group">
                     <h3>Data Management</h3>
-                    <button id="backup-data-btn" class="btn">📥 Download Backup</button>
-                    <button id="restore-data-btn" class="btn" style="margin-top:8px;">📤 Restore Backup</button>
+                    <button id="backup-data-btn" class="btn">📥 Download Full Backup (JSON)</button>
+                    <button id="export-csv-btn" class="btn" style="margin-top:8px; background: var(--system-green);">📊 Export Transactions (CSV)</button>
+                    <button id="restore-data-btn" class="btn secondary" style="margin-top:8px;">📤 Restore Backup (JSON)</button>
                     <input type="file" id="restore-file-input" accept=".json" style="display:none;">
                     <p id="backup-status" class="transaction-meta" style="margin-top:8px;"></p>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="setting-group" style="margin-top: 40px;">
+                    <h3 style="color: var(--expense-color);">Danger Zone</h3>
+                    <button id="clear-data-btn" class="btn" style="background: var(--expense-bg); color: var(--expense-color);">🗑️ Clear All Data</button>
+                    <p class="transaction-meta" style="margin-top:8px;">This will permanently delete all your transactions, accounts, and settings.</p>
                 </div>
             </div>
         </div>
