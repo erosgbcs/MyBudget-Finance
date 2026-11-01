@@ -841,42 +841,45 @@ function renderBudgetChart() {
 // ---------- Financial Health Score ----------
 function calculateHealthScore() {
     const { income, expense } = getMonthlyIncomeExpense();
-    let score = 50; // Base score
-    let tip = "Keep tracking your expenses to improve your score!";
+    let score = 0; // Start from 0, build up to 100
+    let tip = "Set budgets and track expenses to improve your score.";
 
     // 1. Savings Rate (Max 40 points)
     if (income > 0) {
         const savingsRate = (income - expense) / income;
-        if (savingsRate >= 0.2) { score += 40; tip = "Excellent savings rate! You are saving over 20% of your income."; }
-        else if (savingsRate > 0) { score += 20; tip = "Good job saving, but try to aim for 20% of your income."; }
-        else { score -= 10; tip = "You are spending more than you earn this month."; }
+        if (savingsRate >= 0.2) { score += 40; tip = "Excellent! You are saving over 20% of your income."; }
+        else if (savingsRate >= 0.1) { score += 25; tip = "Good job saving. Aim for 20% to max out your score."; }
+        else if (savingsRate > 0) { score += 10; tip = "Your savings rate is low. Try to save more next month."; }
+        else { tip = "Warning: You are spending more than you earn."; }
     } else if (expense > 0) {
-        tip = "Add your income to get a more accurate health score.";
+        tip = "Add your income to get an accurate health score.";
     }
 
     // 2. Debt Ratio (Max 30 points)
     const activeDebt = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0).reduce((sum, l) => sum + (l.amount - (l.paid || 0)), 0);
     if (activeDebt === 0) { score += 30; }
-    else if (income > 0 && (activeDebt / income) < 0.3) { score += 15; }
-    else if (activeDebt > 0) { score -= 10; }
-
+    else if (income > 0 && (activeDebt / income) < 0.3) { score += 15; tip += " You have some debt, but it's manageable."; }
+    
     // 3. Budget Adherence (Max 30 points)
     const budgetsThisMonth = budgets[getMonthKey()] || {};
     const spendThisMonth = getCategorySpending(getMonthKey());
     let categoriesOverBudget = 0;
-    Object.keys(budgetsThisMonth).forEach(cat => {
-        if ((spendThisMonth[cat] || 0) > budgetsThisMonth[cat]) categoriesOverBudget++;
-    });
-    
-    if (Object.keys(budgetsThisMonth).length > 0) {
+    let totalBudgets = Object.keys(budgetsThisMonth).length;
+
+    if (totalBudgets > 0) {
+        Object.keys(budgetsThisMonth).forEach(cat => {
+            if ((spendThisMonth[cat] || 0) > budgetsThisMonth[cat]) categoriesOverBudget++;
+        });
+        
         if (categoriesOverBudget === 0) { score += 30; }
-        else { score -= (categoriesOverBudget * 10); }
+        else { score += 15; tip += " Some categories are over budget."; }
+    } else {
+        // If no budgets are set, they get 0 points for budgeting, making 100 impossible.
+        tip += " Set up budgets to get the final 30 points.";
     }
 
-    // Cap score between 0 and 100
     score = Math.max(0, Math.min(100, Math.round(score)));
 
-    // Determine color
     let color = 'var(--expense-color)'; // Red
     if (score >= 75) color = 'var(--income-color)'; // Green
     else if (score >= 50) color = 'var(--warning-color)'; // Orange
