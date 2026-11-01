@@ -1018,6 +1018,29 @@ function calculateCashFlowForecast() {
     };
 }
 
+// Format AI text with colors, bold, and line breaks
+function formatAIText(text) {
+    if (!text) return '';
+    let formatted = text;
+    
+    // Convert Bold
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong style="color: var(--text-primary); font-weight: 600;">$1</strong>');
+    
+    // Convert [green]text[/green]
+    formatted = formatted.replace(/\[green\](.*?)\[\/green\]/g, '<span style="color: var(--income-color); font-weight: 600;">$1</span>');
+    
+    // Convert [red]text[/red]
+    formatted = formatted.replace(/\[red\](.*?)\[\/red\]/g, '<span style="color: var(--expense-color); font-weight: 600;">$1</span>');
+    
+    // Convert [blue]text[/blue] (in case the AI uses it)
+    formatted = formatted.replace(/\[blue\](.*?)\[\/blue\]/g, '<span style="color: var(--accent); font-weight: 600;">$1</span>');
+    
+    // Convert Line Breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    return formatted;
+}
+
 // 2. Feed the math to the AI Chat
 function generateFinancialContext() {
     const totalBal = accounts.reduce((sum, acc) => sum + acc.balance + getSavingsTotalForAccount(acc.id), 0);
@@ -1060,7 +1083,8 @@ function setupChat() {
             const context = generateFinancialContext();
             const response = await askBudgetQuestion(text, context);
             document.getElementById(loadingId).remove();
-            chatMessages.innerHTML += `<div style="background: var(--fill-3); padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px;">${response.text}</div>`;
+            const formattedResponse = formatAIText(response.text);
+            chatMessages.innerHTML += `<div style="background: var(--fill-3); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">${formattedResponse}</div>`;
             chatMessages.scrollTop = chatMessages.scrollHeight;
         } catch (err) {
             document.getElementById(loadingId).remove();

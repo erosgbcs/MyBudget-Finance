@@ -52,8 +52,17 @@ Reply with ONLY a valid JSON object (no markdown, no backticks) with these exact
 
 // 3. Chat Assistant
 async function askBudgetQuestion(question, contextData) {
-  const prompt = `You are a helpful budget assistant. Answer the user's question concisely based ONLY on the following financial data. Do not invent numbers.
+  const prompt = `You are a helpful, premium financial assistant. Answer the user's question based ONLY on the following financial data. Do not invent numbers.
 Note: The "forecast" object contains mathematically calculated predictions for the rest of the month (projectedLowBalance, safeToSpendPerDay).
+
+FORMATTING RULES:
+1. Use **bold** for key numbers and categories.
+2. Wrap positive financial amounts (income, savings, surplus) in [green]...[/green] tags.
+3. Wrap negative financial amounts (expenses, debt, deficits) in [red]...[/red] tags.
+4. Use emojis sparingly (e.g., 🟢, 🔴, 📊, 💡).
+5. Use line breaks (\n) to separate thoughts.
+6. Keep it concise and conversational. Do not use markdown bullet points (-).
+
 Data: ${JSON.stringify(contextData)}
 Question: ${question}`;
   return await askAI(prompt);
