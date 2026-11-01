@@ -327,7 +327,36 @@ function updateLoanPaid(id, newPaid) {
 }
 function addBill(name, amount, dueDate) { bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false }); saveBills(); renderAll(); showToast('Bill added', 'success'); }
 function deleteBill(id) { bills = bills.filter(b => b.id !== id); saveBills(); renderAll(); }
-function toggleBillPaid(id) { const bill = bills.find(b => b.id === id); if (bill) { bill.paid = !bill.paid; saveBills(); renderAll(); } }
+// ---------- Financial Health Score ----------
+function calculateHealthScore() {
+    const { income, expense } = getMonthlyIncomeExpense();
+    let score = 0; // Start from 0, build up to 100
+    let tip = "Track your income and expenses to improve your score.";
+
+    // 1. Savings Rate (Max 60 points)
+    if (income > 0) {
+        const savingsRate = (income - expense) / income;
+        if (savingsRate >= 0.2) { score += 60; tip = "Excellent! You are saving over 20% of your income."; }
+        else if (savingsRate >= 0.1) { score += 40; tip = "Good job saving. Aim for 20% to max out your score."; }
+        else if (savingsRate > 0) { score += 20; tip = "Your savings rate is low. Try to save more next month."; }
+        else { tip = "Warning: You are spending more than you earn."; }
+    } else if (expense > 0) {
+        tip = "Add your income to get an accurate health score.";
+    }
+
+    // 2. Debt Ratio (Max 40 points)
+    const activeDebt = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0).reduce((sum, l) => sum + (l.amount - (l.paid || 0)), 0);
+    if (activeDebt === 0) { score += 40; }
+    else if (income > 0 && (activeDebt / income) < 0.3) { score += 20; tip += " You have some debt, but it's manageable."; }
+
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    let color = 'var(--expense-color)'; // Red
+    if (score >= 75) color = 'var(--income-color)'; // Green
+    else if (score >= 50) color = 'var(--warning-color)'; // Orange
+
+    return { score, color, tip };
+}
 function setBudget(category, limit) { const monthKey = getMonthKey(); if (!budgets[monthKey]) budgets[monthKey] = {}; budgets[monthKey][category] = limit; saveBudgets(); renderAll(); showToast('Budget set', 'success'); }
 
 function processRecurringTransactions() {
@@ -838,36 +867,7 @@ function renderBudgetChart() {
     });
 }
 
-// ---------- Financial Health Score ----------
-function calculateHealthScore() {
-    const { income, expense } = getMonthlyIncomeExpense();
-    let score = 0; // Start from 0, build up to 100
-    let tip = "Track your income and expenses to improve your score.";
-
-    // 1. Savings Rate (Max 60 points)
-    if (income > 0) {
-        const savingsRate = (income - expense) / income;
-        if (savingsRate >= 0.2) { score += 60; tip = "Excellent! You are saving over 20% of your income."; }
-        else if (savingsRate >= 0.1) { score += 40; tip = "Good job saving. Aim for 20% to max out your score."; }
-        else if (savingsRate > 0) { score += 20; tip = "Your savings rate is low. Try to save more next month."; }
-        else { tip = "Warning: You are spending more than you earn."; }
-    } else if (expense > 0) {
-        tip = "Add your income to get an accurate health score.";
-    }
-
-    // 2. Debt Ratio (Max 40 points)
-    const activeDebt = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0).reduce((sum, l) => sum + (l.amount - (l.paid || 0)), 0);
-    if (activeDebt === 0) { score += 40; }
-    else if (income > 0 && (activeDebt / income) < 0.3) { score += 20; tip += " You have some debt, but it's manageable."; }
-
-    score = Math.max(0, Math.min(100, Math.round(score)));
-
-    let color = 'var(--expense-color)'; // Red
-    if (score >= 75) color = 'var(--income-color)'; // Green
-    else if (score >= 50) color = 'var(--warning-color)'; // Orange
-
-    return { score, color, tip };
-}
+// (Function is defined earlier in the file)
 
 function renderHealthScore() {
     const { score, color, tip } = calculateHealthScore();
@@ -1389,6 +1389,26 @@ function setupChat() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         try {
+            const lowerText = text.toLowerCase();
+            // Check if user is trying to add a transaction via chat
+            if (lowerText.startsWith('add ') || lowerText.includes('spent ') || lowerText.includes('bought ') || lowerText.includes('paid ') || lowerText.includes('received ')) {
+                const parsed = await parseNaturalLanguage(text, accounts);
+                if (parsed && parsed.amount && parsed.description) {
+                    let accId = accounts[0]?.id;
+                    if (parsed.accountName) {
+                        const found = accounts.find(a => a.name.toLowerCase() === parsed.accountName.toLowerCase());
+                        if (found) accId = found.id;
+                    }
+                    if (accId) {
+                        addTransaction(parsed.description, parsed.amount, parsed.type || 'expense', parsed.category || 'Other', accId);
+                        document.getElementById(loadingId).remove();
+                        chatMessages.innerHTML += `<div style="background: var(--income-bg); color: var(--text-primary); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">✅ Transaction added: <strong>${parsed.description}</strong> for ₱${parsed.amount} (${parsed.category || 'Other'}).</div>`;
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                        return;
+                    }
+                }
+            }
+
             const context = generateFinancialContext();
             const response = await askBudgetQuestion(text, context);
             document.getElementById(loadingId).remove();
@@ -1396,7 +1416,7 @@ function setupChat() {
             chatMessages.innerHTML += `<div style="background: var(--fill-3); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">${formattedResponse}</div>`;
             chatMessages.scrollTop = chatMessages.scrollHeight;
         } catch (err) {
-            document.getElementById(loadingId).remove();
+            document.getElementById(loadingId)?.remove();
             chatMessages.innerHTML += `<div style="color: var(--expense-color); font-size: 13px; align-self: flex-start; padding: 4px;">Error: ${err.message}</div>`;
         }
     };
@@ -1490,6 +1510,32 @@ function setupFilters() {
 // ---------- Initialize & Service Worker ----------
 function initialize() {
     renderCustomCategories();
+    
+    const digestBtn = document.getElementById('generate-digest-btn');
+    if (digestBtn) {
+        digestBtn.addEventListener('click', async (e) => {
+            const btn = e.target;
+            const origText = btn.innerHTML;
+            btn.innerHTML = '⏳ Generating...';
+            btn.disabled = true;
+            
+            try {
+                const context = generateFinancialContext();
+                const prompt = `Provide a short, motivating monthly financial digest based on this data. Highlight the biggest expense category, how much was saved, and give one actionable tip. Use the same formatting rules (₱, bold, [green], [red]).`;
+                const response = await askBudgetQuestion(prompt, context);
+                
+                document.getElementById('chat-modal').classList.add('open');
+                const chatMessages = document.getElementById('chat-messages');
+                chatMessages.innerHTML += `<div style="background: var(--fill-3); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 2px; align-self: flex-start; max-width: 85%; font-size: 15px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">${formatAIText(response.text)}</div>`;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (err) {
+                showToast('Failed to generate digest: ' + err.message, 'warning');
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        });
+    }
     
     // Show Debt Calculator if there are borrowed loans
     if (loans.some(l => l.type === 'borrowed' && (l.amount - (l.paid||0)) > 0)) {
