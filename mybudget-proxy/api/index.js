@@ -47,8 +47,35 @@ async function callGroq(prompt) {
 }
 
 app.post('/api/ai', async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, image } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+
+  // If an image is provided, we MUST use Gemini (Groq does not support vision)
+  if (image) {
+    try {
+      const resGemini = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': GEMINI_KEY,
+        },
+        body: JSON.stringify({ 
+          contents: [{ 
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: 'image/jpeg', data: image } }
+            ] 
+          }] 
+        }),
+      });
+      if (!resGemini.ok) throw new Error(`Gemini ${resGemini.status}: ${await resGemini.text()}`);
+      const data = await resGemini.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return res.json({ provider: 'gemini', text });
+    } catch (err) {
+      return res.status(502).json({ error: 'Vision AI failed: ' + err.message });
+    }
+  }
 
   try {
     const text = await callGemini(prompt);

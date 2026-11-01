@@ -208,6 +208,15 @@
                 </div>
                 <div id="loans-list"></div>
             </div>
+            <div class="section glass" id="debt-calculator-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Debt Payoff Calculator (Snowball)</h2>
+                </div>
+                <p class="transaction-meta" style="margin-bottom:10px;">See how fast you can be debt-free by paying a little extra each month.</p>
+                <input type="number" id="extra-payment-input" placeholder="Extra Monthly Payment (₱)" step="100" style="margin-bottom:10px;">
+                <button id="calc-debt-btn" class="btn">Calculate Payoff</button>
+                <div id="debt-result" style="margin-top:15px; font-weight:600; color:var(--income-color);"></div>
+            </div>
         </div>
 
         <!-- BILLS TAB -->
@@ -280,6 +289,15 @@
                     <p id="backup-status" class="transaction-meta" style="margin-top:8px;"></p>
                 </div>
 
+                <div class="setting-group">
+                    <h3>Custom Categories</h3>
+                    <div style="display:flex; gap:8px; margin-bottom:10px;">
+                        <input type="text" id="new-category-input" placeholder="New Category Name" style="margin-bottom:0;">
+                        <button id="add-category-btn" class="btn btn-small" style="width:auto; margin-top:0;">Add</button>
+                    </div>
+                    <div id="custom-categories-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+                </div>
+
                 <!-- Security -->
                 <div class="setting-group">
                     <h3>Security</h3>
@@ -334,8 +352,12 @@
                 <form id="transaction-form">
                     <!-- AI SMART ADD INPUT -->
                     <div style="background: var(--balance-bg); padding: 12px; border-radius: var(--radius-md); margin-bottom: 12px;">
-                        <label style="display:block; font-size:12px; font-weight:600; color:var(--accent); margin-bottom:6px; text-transform:uppercase;">✨ Smart Add</label>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <label style="font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase;">✨ Smart Add</label>
+                            <button type="button" id="scan-receipt-btn" style="background:none; border:none; color:var(--accent); font-size:13px; font-weight:600; cursor:pointer;">📸 Scan Receipt</button>
+                        </div>
                         <input type="text" id="smart-add-input" placeholder="e.g. Spent 150 on coffee using GCash" style="margin-bottom:0; background: var(--card-bg);">
+                        <input type="file" id="receipt-file-input" accept="image/*" capture="environment" style="display:none;">
                     </div>
                     <input type="text" id="modal-description" placeholder="Description" required>
                     <input type="number" id="modal-amount" placeholder="Amount" step="0.01" required>

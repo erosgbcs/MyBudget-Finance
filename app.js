@@ -23,6 +23,13 @@ let bills = safeParse('mb_bills', []);
 let netWorthHistory = safeParse('mb_networth_history', []);
 let appPin = localStorage.getItem('mb_pin') || null;
 let recurringTx = safeParse('mb_recurring', []);
+let customCategories = safeParse('mb_custom_categories', []);
+
+const DEFAULT_CATEGORIES = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Salary', 'Other Income', 'Other'];
+function getAllCategories() {
+    return [...DEFAULT_CATEGORIES, ...customCategories];
+}
+function saveCustomCategories() { localStorage.setItem('mb_custom_categories', JSON.stringify(customCategories)); }
 let advFilters = { start: '', end: '', category: 'all', account: 'all' };
 
 function saveRecurring() { localStorage.setItem('mb_recurring', JSON.stringify(recurringTx)); }
@@ -282,15 +289,10 @@ function openFormModal(type) {
     } 
     else if (type === 'budget') {
         titleEl.textContent = 'Set Budget';
+        const catOptions = getAllCategories().map(c => `<option value="${c}">${c}</option>`).join('');
         fieldsEl.innerHTML = `
             <select id="gf-category">
-                <option value="Food">Food</option>
-                <option value="Transport">Transport</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Bills">Bills</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Health">Health</option>
-                <option value="Other">Other</option>
+                ${catOptions}
             </select>
             <input type="number" id="gf-amount" placeholder="Budget limit" step="0.01" required>
         `;
@@ -533,6 +535,56 @@ function renderSavings() {
         `;
         container.appendChild(div);
     });
+}
+
+function renderCustomCategories() {
+    const list = document.getElementById('custom-categories-list');
+    if (!list) return;
+    list.innerHTML = customCategories.map(c => `
+        <span style="background: var(--fill-3); padding: 4px 10px; border-radius: 12px; font-size: 13px; display:flex; align-items:center; gap:6px;">
+            ${c} <button onclick="deleteCategory('${c}')" style="background:none; border:none; color:var(--expense-color); font-weight:bold; cursor:pointer;">&times;</button>
+        </span>
+    `).join('');
+}
+
+function deleteCategory(cat) {
+    customCategories = customCategories.filter(c => c !== cat);
+    saveCustomCategories();
+    renderCustomCategories();
+    showToast('Category removed', 'success');
+}
+
+function calculateDebtPayoff() {
+    const extra = parseFloat(document.getElementById('extra-payment-input').value) || 0;
+    const activeLoans = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0);
+    
+    if (!activeLoans.length) {
+        document.getElementById('debt-result').textContent = "You have no active debts! 🎉";
+        return;
+    }
+
+    // Sort by remaining balance (Snowball method)
+    activeLoans.sort((a, b) => (a.amount - (a.paid||0)) - (b.amount - (b.paid||0)));
+    
+    let totalDebt = activeLoans.reduce((sum, l) => sum + (l.amount - (l.paid||0)), 0);
+    let months = 0;
+    let simulatedBalance = totalDebt;
+
+    // Assume a minimum payment of 1000/mo per loan + extra (Simplified)
+    const monthlyPayment = (activeLoans.length * 1000) + extra;
+
+    while (simulatedBalance > 0 && months < 600) {
+        simulatedBalance -= monthlyPayment;
+        months++;
+    }
+
+    if (months >= 600) {
+        document.getElementById('debt-result').textContent = "Payment is too low to ever pay off the debt.";
+        document.getElementById('debt-result').style.color = "var(--expense-color)";
+    } else {
+        document.getElementById('debt-result').innerHTML = `You will be debt-free in <span style="font-size:20px;">${months} months</span>!`;
+        document.getElementById('debt-result').style.color = "var(--income-color)";
+    }
 }
 
 function renderLoans() {
@@ -898,6 +950,10 @@ function openTransactionModal() {
     document.getElementById('modal-type').value = 'expense';
     toggleTransferFields();
 
+    // Populate dynamic categories
+    const catOptions = getAllCategories().map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('modal-category').innerHTML = catOptions;
+
     // Remove old listener if it exists to avoid duplicates
     descInput.removeEventListener('input', handleAICategorization);
     // Add the new AI listener
@@ -1082,6 +1138,52 @@ document.getElementById('restore-data-btn').addEventListener('click', () => docu
 document.getElementById('restore-file-input').addEventListener('change', (e) => { if (e.target.files[0]) restoreData(e.target.files[0]); e.target.value = ''; });
 document.getElementById('clear-data-btn').addEventListener('click', clearAllData);
 
+// Custom Categories
+document.getElementById('add-category-btn').addEventListener('click', () => {
+    const input = document.getElementById('new-category-input');
+    const val = input.value.trim();
+    if (val && !getAllCategories().includes(val)) {
+        customCategories.push(val);
+        saveCustomCategories();
+        renderCustomCategories();
+        input.value = '';
+        showToast('Category added', 'success');
+    }
+});
+
+// Debt Calculator
+document.getElementById('calc-debt-btn').addEventListener('click', calculateDebtPayoff);
+
+// Receipt Scanning
+document.getElementById('scan-receipt-btn').addEventListener('click', () => document.getElementById('receipt-file-input').click());
+document.getElementById('receipt-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        const base64String = ev.target.result.split(',')[1];
+        const btn = document.getElementById('scan-receipt-btn');
+        btn.textContent = '⏳ Scanning...';
+        
+        try {
+            const parsed = await parseReceiptImage(base64String);
+            if (parsed.amount) document.getElementById('modal-amount').value = parsed.amount;
+            if (parsed.description) document.getElementById('modal-description').value = parsed.description;
+            if (parsed.category) document.getElementById('modal-category').value = parsed.category;
+            document.getElementById('modal-type').value = 'expense';
+            toggleTransferFields();
+            showToast('Receipt scanned!', 'success');
+        } catch (err) {
+            showToast('Failed to read receipt', 'warning');
+        } finally {
+            btn.textContent = '📸 Scan Receipt';
+            e.target.value = '';
+        }
+    };
+    reader.readAsDataURL(file);
+});
+
 setInterval(() => { const now = new Date().toDateString(); if (now !== lastKnownDate) { lastKnownDate = now; renderAll(); } }, 60000);
 
 // ---------- Offline/Online Listeners ----------
@@ -1248,7 +1350,7 @@ function setupSecurity() {
 function setupFilters() {
     const modal = document.getElementById('filter-modal');
     document.getElementById('open-filter-btn').onclick = () => {
-        const cats = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other', 'Salary', 'Other Income'];
+        const cats = getAllCategories();
         document.getElementById('filter-category').innerHTML = '<option value="all">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
         document.getElementById('filter-account').innerHTML = '<option value="all">All Accounts</option>' + accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         
@@ -1284,6 +1386,12 @@ function setupFilters() {
 
 // ---------- Initialize & Service Worker ----------
 function initialize() {
+    renderCustomCategories();
+    
+    // Show Debt Calculator if there are borrowed loans
+    if (loans.some(l => l.type === 'borrowed' && (l.amount - (l.paid||0)) > 0)) {
+        document.getElementById('debt-calculator-section').style.display = 'block';
+    }
     generatePaletteButtons();
     applyTheme();
     renderAll();

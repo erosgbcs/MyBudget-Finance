@@ -28,6 +28,32 @@ Transaction: "${description}"`;
 }
 
 // 2. Smart Add (Natural Language Parser)
+async function parseReceiptImage(base64Image) {
+  const prompt = `Extract transaction details from this receipt image. 
+Reply with ONLY a valid JSON object (no markdown, no backticks) with these exact keys:
+{
+  "amount": (number),
+  "description": (string - the merchant name),
+  "category": (string: Food, Transport, Shopping, Bills, Entertainment, Health, Salary, Other Income, Other),
+  "type": "expense"
+}`;
+  
+  const res = await fetch(AI_PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, image: base64Image }),
+  });
+  
+  if (!res.ok) throw new Error('Receipt scan failed');
+  const data = await res.json();
+  try {
+    const jsonStr = data.text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    throw new Error('Could not parse AI response');
+  }
+}
+
 async function parseNaturalLanguage(text, accounts) {
   const accountNames = accounts.map(a => a.name).join(', ');
   const prompt = `Extract transaction details from this text: "${text}"
