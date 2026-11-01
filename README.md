@@ -7,19 +7,28 @@ MyBudget helps you track expenses, manage multiple accounts, set savings goals, 
 ## 🌟 Features
 
 ### Core Finance Tracking
-- **Accounts Management:** Track balances across GCash, Maribank, Cash, or custom accounts.
-- **Transactions:** Log income, expenses, and transfers with automatic budget alerts.
-- **Savings Goals:** Set targets and track progress over time.
-- **Loans:** Keep track of money you owe or money owed to you, complete with partial payment progress bars.
-- **Bills:** Never miss a due date with upcoming bill reminders and overdue indicators.
+- **Accounts & Transactions Management:** Track balances across GCash, Maribank, Cash, or custom accounts. Easily edit accounts and transactions with a native-feeling swipe gesture (Swipe left to Edit/Delete).
+- **Recurring Transactions:** Set up repeat monthly transactions. View, manage, and cancel active subscriptions directly from the Settings tab.
+- **Smart Bills:** Never miss a due date. Marking a bill as "Paid" automatically logs the expense and deducts it from your default account.
+- **Savings & Loans:** Set targets for savings goals, track progress over time, and monitor money you owe or are owed with partial payment progress bars.
 - **Interactive Charts:** Visualize your income vs. expenses, category spending, and net worth history.
 - **PWA & Offline Ready:** Install it on your phone's home screen and use it without an internet connection.
 
 ### 🧠 AI Integrations (Powered by Gemini & Groq)
 - **Smart Add:** Type a sentence like *"Spent 150 on coffee using GCash"* and the AI automatically fills out the amount, category, and account.
-- **Auto-Categorization:** As you type a description, the AI predicts the category instantly.
-- **AI Chat Assistant:** Ask questions like *"How much did I spend on food this month?"* or *"What is my net worth?"* based on your real data.
+- **Dynamic Category Creation:** The AI isn't restricted to your current list. If you buy groceries and don't have a "Groceries" category, it will invent one, format it correctly, and save it to your database automatically.
+- **Bulk AI Cleanup:** A dedicated tool in Settings that scans all uncategorized ("Other") transactions and automatically categorizes them in bulk.
+- **Proactive Anomaly Detection:** On app load, the AI checks your recent spending. If you spent 40% more this week than your monthly average, it shows a warning banner to keep you on track.
+- **AI Financial Digest:** Generate a personalized, motivating monthly summary highlighting your biggest expenses, savings rate, and actionable tips.
+- **Interactive AI Chat Assistant:** Ask questions like *"How much did I spend on food this month?"* or add transactions via chat (e.g., *"Add 500 for gas"*). 
 - **Predictive Forecasting:** AI calculates your projected low balance and "safe to spend" amount per day based on upcoming bills and average daily spending.
+
+### 📱 Native App Feel & Security
+- **Biometric/Passcode Lock:** Secure your app with a 4-digit PIN.
+- **Inactivity Auto-Lock:** Automatically locks the app after 2 minutes of inactivity to keep your finances hidden if you leave your phone unattended.
+- **Haptic Feedback:** Subtle vibrations on button taps and swipes make the PWA feel like a native application.
+- **PWA Install Prompt:** Smart detection for iOS and Android to prompt users to add the app to their Home Screen.
+- **Dynamic iOS Design System:** True dark mode, customizable color palettes, and a responsive UI built on Apple's Human Interface Guidelines.
 
 ## 🛠️ Tech Stack
 - **Frontend:** HTML5, Vanilla JavaScript, CSS3 (Custom iOS System Design), Chart.js
