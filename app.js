@@ -719,21 +719,65 @@ function renderTransactionList() {
     filtered.forEach(t => {
         const li = document.createElement('li');
         li.className = t.type;
+        li.style.padding = '0'; // Override default padding for swipe
+        li.style.overflow = 'hidden';
+        li.style.position = 'relative';
+        li.style.touchAction = 'pan-y'; // Ensures vertical scroll works, horizontal is captured by JS
+        
         const acc = accounts.find(a => a.id === t.accountId);
         const accName = acc ? acc.name : 'Unknown';
+        
         li.innerHTML = `
-            <div class="transaction-info">
-                <div class="transaction-desc">${t.description}</div>
-                <div class="transaction-meta">
-                    ${t.category} • 
-                    <span class="logo-wrap">${getAccountLogo(accName, 14)} ${accName}</span> • 
-                    ${safeFormatDate(t.date)}
-                </div>
+            <!-- Background Swipe Actions -->
+            <div style="position: absolute; right: 0; top: 0; bottom: 0; display: flex; z-index: 1;">
+                <button onclick="openTransactionModal(${t.id})" style="background: var(--accent); color: white; border: none; width: 75px; font-weight: 600; font-size: 14px; cursor: pointer;">Edit</button>
+                <button onclick="deleteTransaction(${t.id})" style="background: var(--expense-color); color: white; border: none; width: 75px; font-weight: 600; font-size: 14px; cursor: pointer;">Delete</button>
             </div>
-            <span class="transaction-amount ${getAmountClass(t.amount)}">${formatCurrencyWithColor(t.amount)}</span>
-            <button class="edit-btn" onclick="openTransactionModal(${t.id})" style="background:none; border:none; color:var(--accent); padding:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            <button class="delete-btn" onclick="deleteTransaction(${t.id})"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+            
+            <!-- Foreground Content -->
+            <div class="swipe-content" style="position: relative; z-index: 2; background: var(--card-bg); display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; min-height: var(--touch-target); transition: transform 0.2s ease; width: 100%; box-sizing: border-box;">
+                <div class="transaction-info">
+                    <div class="transaction-desc">${t.description}</div>
+                    <div class="transaction-meta">
+                        ${t.category} • 
+                        <span class="logo-wrap">${getAccountLogo(accName, 14)} ${accName}</span> • 
+                        ${safeFormatDate(t.date)}
+                    </div>
+                </div>
+                <span class="transaction-amount ${getAmountClass(t.amount)}">${formatCurrencyWithColor(t.amount)}</span>
+            </div>
         `;
+        
+        // Add Touch Swipe Logic
+        const content = li.querySelector('.swipe-content');
+        let startX = 0, currentX = 0, isSwiping = false;
+        
+        li.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            isSwiping = true;
+            content.style.transition = 'none';
+        }, { passive: true });
+        
+        li.addEventListener('touchmove', (e) => {
+            if (!isSwiping) return;
+            currentX = e.touches[0].clientX;
+            let diff = currentX - startX;
+            if (diff > 0) diff = 0; // Only left swipe
+            if (diff < -150) diff = -150; // Limit swipe width
+            content.style.transform = `translateX(${diff}px)`;
+        }, { passive: true });
+        
+        li.addEventListener('touchend', () => {
+            isSwiping = false;
+            content.style.transition = 'transform 0.2s ease';
+            let diff = currentX - startX;
+            if (diff < -75) {
+                content.style.transform = 'translateX(-150px)'; // Snap open
+            } else {
+                content.style.transform = 'translateX(0px)'; // Snap closed
+            }
+        });
+        
         list.appendChild(li);
     });
 }
@@ -1621,6 +1665,44 @@ function setupFilters() {
 function initialize() {
     renderCustomCategories();
     
+    // --- PWA INSTALL LOGIC ---
+    let deferredPrompt;
+    const pwaBanner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('install-pwa-btn');
+    const pwaInstructions = document.getElementById('pwa-instructions');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'block';
+        if (!localStorage.getItem('mb_pwa_dismissed')) pwaBanner.style.display = 'block';
+    });
+
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        // Already installed, do nothing
+    } else if (!localStorage.getItem('mb_pwa_dismissed')) {
+        // Detect iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            pwaInstructions.style.display = 'block';
+            setTimeout(() => { pwaBanner.style.display = 'block'; }, 3000);
+        }
+    }
+
+    document.getElementById('close-pwa-banner').addEventListener('click', () => {
+        pwaBanner.style.display = 'none';
+        localStorage.setItem('mb_pwa_dismissed', 'true');
+    });
+
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') pwaBanner.style.display = 'none';
+        deferredPrompt = null;
+    });
+    // -------------------------
+    
     const digestBtn = document.getElementById('generate-digest-btn');
     if (digestBtn) {
         digestBtn.addEventListener('click', async (e) => {
@@ -1680,6 +1762,13 @@ function initialize() {
     };
     ['mousemove', 'keydown', 'touchstart', 'click'].forEach(evt => document.addEventListener(evt, window.resetInactivityTimer));
     window.resetInactivityTimer();
+
+    // Haptic Feedback for all clicks
+    document.body.addEventListener('click', (e) => {
+        if (e.target.closest('button, .btn, .nav-item, .nav-fab, .more-item, .account-item, .palette-btn, .filter-btn, .paid-btn, .delete-btn')) {
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+    });
 
     // Register Service Worker for offline caching
     if ('serviceWorker' in navigator) {
