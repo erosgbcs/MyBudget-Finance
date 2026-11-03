@@ -1,6 +1,6 @@
 // Bump this version number every time you make changes to your files!
 // e.g., change v86 to v87
-const CACHE_NAME = 'mybudget-v35';
+const CACHE_NAME = 'mybudget-v75';
 
 const ASSETS_TO_CACHE = [
   './',

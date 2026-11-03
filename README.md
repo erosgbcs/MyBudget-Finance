@@ -10,7 +10,8 @@ MyBudget helps you track expenses, manage multiple accounts, set savings goals, 
 - **Accounts & Transactions Management:** Track balances across GCash, Maribank, Cash, or custom accounts. Easily edit accounts and transactions with a native-feeling swipe gesture (Swipe left to Edit/Delete).
 - **Recurring Transactions:** Set up repeat monthly transactions. View, manage, and cancel active subscriptions directly from the Settings tab.
 - **Smart Bills:** Never miss a due date. Marking a bill as "Paid" automatically logs the expense and deducts it from your default account.
-- **Savings & Loans:** Set targets for savings goals, track progress over time, and monitor money you owe or are owed with partial payment progress bars.
+- **Savings & Loans:** Set targets for savings goals, track progress over time, and monitor money you owe or are owed with partial payment progress bars. Link each loan to a wallet so payments reduce borrowed-loan balances and repayments received increase lent-loan balances.
+- **Financial Health Score:** Review a percentage-based score built from monthly savings performance and outstanding debt compared with income, with guidance for empty or incomplete financial data.
 - **Interactive Charts:** Visualize your income vs. expenses, category spending, and net worth history.
 - **PWA & Offline Ready:** Install it on your phone's home screen and use it without an internet connection.
 
