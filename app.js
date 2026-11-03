@@ -204,7 +204,6 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 4000);
 }
 
-// ---------- Theme & Settings ----------
 function applyTheme() {
     if (isDarkMode) {
         document.body.classList.add('dark-theme');
@@ -297,6 +296,7 @@ function openFormModal(type) {
     } 
     else if (type === 'loan') {
         titleEl.textContent = 'Add Loan';
+        let accountOptions = accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         fieldsEl.innerHTML = `
             <input type="text" id="gf-name" placeholder="Loan description" required>
             <input type="number" id="gf-amount" placeholder="Amount" step="0.01" required>
@@ -304,6 +304,7 @@ function openFormModal(type) {
                 <option value="borrowed">I Owe (Borrowed)</option>
                 <option value="lent">Owed to Me (Lent)</option>
             </select>
+            <select id="gf-account" required>${accountOptions}</select>
         `;
     } 
     else if (type === 'bill') {
@@ -339,15 +340,40 @@ function deleteAccount(id) { if (accounts.length <= 1) return alert('Cannot dele
 function addSavingsGoal(name, target, current, accountId) { savings.push({ id: 'sav' + Date.now(), name, target, current, accountId, createdAt: new Date().toISOString(), initialAmount: current || 0 }); saveSavings(); renderAll(); showToast('Savings goal added', 'success'); }
 function updateSavings(id, newCurrent) { const goal = savings.find(s => s.id === id); if (goal) { goal.current = Math.max(0, newCurrent); saveSavings(); renderAll(); } }
 function deleteSavingsGoal(id) { savings = savings.filter(s => s.id !== id); saveSavings(); renderAll(); }
-function addLoan(name, amount, type) { loans.push({ id: 'loan' + Date.now(), name, amount, type, paid: 0 }); saveLoans(); renderAll(); showToast('Loan added', 'success'); }
+function addLoan(name, amount, type, accountId) { loans.push({ id: 'loan' + Date.now(), name, amount, type, accountId, paid: 0 }); saveLoans(); renderAll(); showToast('Loan added', 'success'); }
 function deleteLoan(id) { loans = loans.filter(l => l.id !== id); saveLoans(); renderAll(); }
 function updateLoanPaid(id, newPaid) {
     const loan = loans.find(l => l.id === id);
     if (!loan) return;
     const val = parseFloat(newPaid);
     if (isNaN(val)) return;
-    loan.paid = Math.max(0, Math.min(loan.amount, val));
+    const updatedPaid = Math.max(0, Math.min(loan.amount, val));
+    const paymentChange = updatedPaid - (loan.paid || 0);
+    const account = accounts.find(a => a.id === loan.accountId);
+    if (paymentChange !== 0 && !account) {
+        showToast('Select a wallet for this loan first.', 'warning');
+        renderLoans();
+        return;
+    }
+    if (account) account.balance += loan.type === 'borrowed' ? -paymentChange : paymentChange;
+    loan.paid = updatedPaid;
     saveLoans();
+    saveAccounts();
+    renderAll();
+}
+function updateLoanAccount(id, accountId) {
+    const loan = loans.find(l => l.id === id);
+    if (!loan || !accountId || loan.accountId === accountId) return;
+    const oldAccount = accounts.find(a => a.id === loan.accountId);
+    const newAccount = accounts.find(a => a.id === accountId);
+    if (!newAccount) return;
+    const direction = loan.type === 'borrowed' ? -1 : 1;
+    const paid = loan.paid || 0;
+    if (oldAccount) oldAccount.balance -= paid * direction;
+    newAccount.balance += paid * direction;
+    loan.accountId = accountId;
+    saveLoans();
+    saveAccounts();
     renderAll();
 }
 function addBill(name, amount, dueDate) { bills.push({ id: 'bill' + Date.now(), name, amount, dueDate, paid: false }); saveBills(); renderAll(); showToast('Bill added', 'success'); }
@@ -667,6 +693,8 @@ function renderLoans() {
     if (!loans.length) { container.innerHTML = `<div class="empty-state">No loans recorded. Tap + to add.</div>`; return; }
     loans.forEach(loan => {
         const lbl = loan.type === 'borrowed' ? 'I Owe' : 'Owed to Me';
+        const account = accounts.find(a => a.id === loan.accountId);
+        const accountOptions = accounts.map(a => `<option value="${a.id}" ${a.id === loan.accountId ? 'selected' : ''}>${a.name}</option>`).join('');
         const paid = loan.paid || 0;
         const remaining = Math.max(0, loan.amount - paid);
         const pct = loan.amount > 0 ? Math.min(100, (paid / loan.amount) * 100) : 0;
@@ -678,9 +706,13 @@ function renderLoans() {
                 <div class="loan-name">${loan.name} <small>(${lbl})</small></div>
                 <div class="savings-progress"><span class="positive">${formatCurrency(paid)}</span> / ${formatCurrency(loan.amount)} ${isComplete ? '✓ Settled' : 'paid'}</div>
                 <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%; ${isComplete ? 'background: var(--income-color);' : ''}"></div></div>
-                <div class="transaction-meta">Remaining: ${formatCurrency(remaining)}</div>
+                <div class="transaction-meta">Remaining: ${formatCurrency(remaining)}${account ? ' · Wallet: ' + account.name : ''}</div>
             </div>
             <input type="number" class="savings-update" value="${paid}" step="0.01" min="0" max="${loan.amount}" onchange="updateLoanPaid('${loan.id}', parseFloat(this.value))">
+            <select class="loan-account-select" aria-label="Wallet for ${loan.name}" onchange="updateLoanAccount('${loan.id}', this.value)">
+                <option value="">Select wallet</option>
+                ${accountOptions}
+            </select>
             <button class="delete-btn" onclick="deleteLoan('${loan.id}')"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         `;
         container.appendChild(div);
@@ -1392,7 +1424,7 @@ document.getElementById('generic-form').addEventListener('submit', (e) => {
         }
     }
     else if (currentFormType === 'savings') addSavingsGoal(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-target').value), parseFloat(document.getElementById('gf-current').value) || 0, document.getElementById('gf-account').value);
-    else if (currentFormType === 'loan') addLoan(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-type').value);
+    else if (currentFormType === 'loan') addLoan(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-type').value, document.getElementById('gf-account').value);
     else if (currentFormType === 'bill') addBill(document.getElementById('gf-name').value.trim(), parseFloat(document.getElementById('gf-amount').value), document.getElementById('gf-due-date').value);
     else if (currentFormType === 'budget') setBudget(document.getElementById('gf-category').value, parseFloat(document.getElementById('gf-amount').value));
     closeFormModal();
