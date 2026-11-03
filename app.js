@@ -398,6 +398,11 @@ function toggleBillPaid(id) {
 // ---------- Financial Health Score ----------
 function calculateHealthScore() {
     const { income, expense } = getMonthlyIncomeExpense();
+    const hasFinancialData = income > 0 || expense > 0 || transactions.length > 0 || loans.length > 0 || accounts.some(account => account.balance !== 0);
+    if (!hasFinancialData) {
+        return { score: 0, color: 'var(--accent)', tip: 'Add income and expenses to start building your financial health score.' };
+    }
+
     let score = 0; // Start from 0, build up to 100
     let tip = "Track your income and expenses to improve your score.";
 
@@ -414,8 +419,22 @@ function calculateHealthScore() {
 
     // 2. Debt Ratio (Max 40 points)
     const activeDebt = loans.filter(l => l.type === 'borrowed' && (l.amount - (l.paid || 0)) > 0).reduce((sum, l) => sum + (l.amount - (l.paid || 0)), 0);
-    if (activeDebt === 0) { score += 40; }
-    else if (income > 0 && (activeDebt / income) < 0.3) { score += 20; tip += " You have some debt, but it's manageable."; }
+    if (activeDebt === 0) {
+        score += 40;
+    } else if (income > 0) {
+        const debtBurden = activeDebt / income;
+        if (debtBurden <= 0.1) {
+            score += 40;
+            tip += " Your outstanding debt is low compared with your monthly income.";
+        } else if (debtBurden < 0.3) {
+            score += 20;
+            tip += " You have some debt, but it's manageable.";
+        } else {
+            tip += " Your outstanding debt is high compared with your monthly income.";
+        }
+    } else {
+        tip += " Add income to measure whether your debt is manageable.";
+    }
 
     score = Math.max(0, Math.min(100, Math.round(score)));
 
@@ -998,7 +1017,7 @@ function renderHealthScore() {
     if (ring && val && tipEl) {
         ring.style.setProperty('--score', score);
         ring.style.setProperty('--ring-color', color);
-        val.textContent = score;
+        val.textContent = `${score}%`;
         val.style.color = color;
         tipEl.textContent = tip;
     }
